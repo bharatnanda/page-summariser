@@ -9,7 +9,6 @@ A powerful Chrome extension that allows users to summarize web pages using vario
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Privacy](#privacy)
-- [Technical Architecture](#technical-architecture)
 - [Development](#development)
 
 ## Features
