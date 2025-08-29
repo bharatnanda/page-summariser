@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Summary History</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <style>
+    body {
+      background: var(--gradient-bg);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: white;
+      color: var(--dark-text);
+      padding: 25px 30px;
+      border-radius: 12px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      border: 1px solid var(--border);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin: 0;
+      color: var(--primary);
+    }
+
+    .controls {
+      display: flex;
+      gap: 15px;
+      margin-top: 15px;
+      width: 100%;
+    }
+
+    @media (min-width: 768px) {
+      .controls {
+        width: auto;
+        margin-top: 0;
+      }
+    }
+
+    .history-table-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--card-shadow);
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    .history-table th {
+      background: var(--card-gradient);
+      padding: 15px 20px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--dark-text);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .history-table td {
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .history-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .history-table tr {
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .history-table tr:hover {
+      background-color: #f8f9fa;
+    }
+
+    .history-table .title-cell {
+      font-weight: 600;
+      color: var(--primary);
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-table .url-cell {
+      color: var(--secondary);
+      font-size: 0.9rem;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-table .preview-cell {
+      color: var(--light-text);
+      font-size: 0.9rem;
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-table .date-cell {
+      color: var(--secondary);
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .history-table .delete-cell {
+      text-align: center;
+      width: 80px;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 5px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+
+    .delete-btn:hover {
+      background-color: rgba(244, 67, 54, 0.1);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--card-shadow);
+      border: 1px solid var(--border);
+    }
+
+    .empty-state h2 {
+      color: var(--secondary);
+      margin-bottom: 15px;
+    }
+
+    .empty-state p {
+      color: var(--light-text);
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px 0;
+      color: var(--light-text);
+      font-size: 0.9rem;
+      margin-top: 30px;
+    }
+
+    @media (max-width: 767px) {
+      header {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      .history-table th,
+      .history-table td {
+        padding: 10px 15px;
+      }
+
+      .history-table .title-cell {
+        max-width: 150px;
+      }
+
+      .history-table .url-cell {
+        max-width: 120px;
+      }
+
+      .history-table .preview-cell {
+        max-width: 150px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📜 Summary History</h1>
+      <div class="controls">
+        <button id="clearHistoryBtn" class="btn btn-primary">
+          🗑️ Clear History
+        </button>
+      </div>
+    </header>
+
+    <div class="history-table-container">
+      <table class="history-table" id="historyTable">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>URL</th>
+            <th>Preview</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody">
+          <!-- History items will be inserted here -->
+        </tbody>
+      </table>
+    </div>
+
+    <footer>
+      <p>Page Summarizer Extension • History is stored locally in your browser</p>
+    </footer>
+  </div>
+
+  <div id="notification" class="notification"></div>
+
+  <script src="history.js"></script>
+</body>
+</html>
