@@ -16,6 +16,7 @@ A powerful Chrome extension that allows users to summarize web pages using vario
 - **Multi-Provider AI Support**: Works with OpenAI, Google Gemini, Azure OpenAI, and Ollama
 - **Content Extraction**: Automatically extracts text content from web pages
 - **Smart Summarization**: Generates concise, well-structured summaries
+- **Streaming Summaries**: Watch summaries appear in real time for supported providers
 - **History Tracking**: Keeps track of your previous summaries
 - **Caching**: Caches summaries for 30 minutes to reduce API usage
 - **Domain Blacklisting**: Prevents summarization on restricted domains with a comprehensive default list for security and privacy
@@ -35,12 +36,12 @@ A powerful Chrome extension that allows users to summarize web pages using vario
 ### OpenAI
 - **API Key Required**: Yes
 - **Default Model**: gpt-4o-mini
-- **Base URL**: https://api.openai.com/v1/chat/completions
+- **Base URL**: https://api.openai.com/v1 (also accepts full endpoint URLs)
 
 ### Google Gemini
 - **API Key Required**: Yes
-- **Default Model**: gemini-2.5-flash-lite-preview-06-17
-- **Base URL**: https://generativelanguage.googleapis.com/v1beta/models/
+- **Default Model**: gemini-2.5-flash
+- **Base URL**: https://generativelanguage.googleapis.com/v1beta
 
 ### Azure OpenAI
 - **API Key Required**: Yes
@@ -51,7 +52,7 @@ A powerful Chrome extension that allows users to summarize web pages using vario
 - **API Key Required**: No
 - **Default Model**: gemma3n
 - **Base URL**: http://localhost:11434
-- **Note**: Requires Ollama to be installed and running locally
+- **Note**: Requires Ollama to be installed and running locally. If you are calling from a browser extension, set `export OLLAMA_ORIGINS="*"` before starting Ollama.
 
 ## Usage
 
@@ -80,7 +81,7 @@ A powerful Chrome extension that allows users to summarize web pages using vario
 - **API Key**: Your API key for the selected provider (not required for Ollama)
 - **Base URL**: Custom endpoint URL (primarily for Azure OpenAI and Ollama)
 - **Model Name**: Specify which model to use
-- **Temperature**: Control the randomness of the AI output (0.0 to 1.0)
+- **Provider-Scoped Storage**: Each provider keeps its own saved credentials and model settings
 
 ### Provider-Specific Settings
 - **Azure OpenAI**: Requires Deployment Name and API Version
@@ -143,11 +144,11 @@ For complete information about how we handle your data, please read our [Privacy
 ### Data Flow
 
 1. User initiates summarization via popup or context menu
-2. Content script extracts text from current page
-3. Background script checks cache for existing summary
-4. If not cached, sends content to selected AI provider
-5. AI generates summary based on structured prompt
-6. Summary is displayed in results page
+2. Background script extracts page text (selection first, then full page) via the scripting API
+3. Background script checks cache for an existing summary
+4. If not cached, content is sent to the selected AI provider
+5. Summary streams back to the results page in real time
+6. Summary is displayed with title/source metadata
 7. Summary is saved to history and cache
 
 ## Development
@@ -186,6 +187,7 @@ For complete information about how we handle your data, please read our [Privacy
 #### "Unable to Connect to Ollama" Error
 - Ensure Ollama is installed and running
 - Check that Ollama is accessible at http://localhost:11434
+- If requests fail from the extension, set `export OLLAMA_ORIGINS="*"` and restart Ollama
 
 #### "Invalid API Key" Error
 - Verify your API key is correct
