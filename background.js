@@ -1,8 +1,84 @@
+import { buildContentFromText, extractPageData } from './utils/contentExtractor.js';
 import { getSettings } from './utils/settings.js';
-import { buildSummarizationPrompt } from './utils/promptBuilder.js';
-import { fetchSummary } from './utils/apiClient.js';
-import { isDomainBlacklisted } from './utils/domainBlacklist.js';
-import { clearExpiredCache } from './utils/cache.js';
+import { buildSummarizationPrompt, clampContentForProvider } from './utils/promptBuilder.js';
+import { fetchSummary, fetchSummaryStream } from './utils/apiClient.js';
+import { combineBlacklists, isDomainBlacklisted } from './utils/domainBlacklist.js';
+import { saveSummaryForView } from './utils/summaryStore.js';
+import { addHistoryItem, createHistoryItem } from './utils/historyStore.js';
+import { cacheSummary, clearExpiredCache } from './utils/cache.js';
+
+const activeStreams = new Map();
+
+function createStreamId() {
+  return `stream_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function registerStream(streamId) {
+  let readyResolve;
+  const ready = new Promise((resolve) => {
+    readyResolve = resolve;
+  });
+  activeStreams.set(streamId, { port: null, buffer: [], ready, readyResolve });
+}
+
+function cleanupStream(streamId) {
+  const stream = activeStreams.get(streamId);
+  if (!stream) return;
+  if (stream.port) {
+    try {
+      stream.port.disconnect();
+    } catch (error) {
+      // Ignore disconnect errors.
+    }
+  }
+  activeStreams.delete(streamId);
+}
+
+function sendStreamMessage(streamId, message) {
+  const stream = activeStreams.get(streamId);
+  if (!stream) return;
+  if (stream.port) {
+    stream.port.postMessage(message);
+  } else {
+    stream.buffer.push(message);
+  }
+}
+
+function waitForStreamReady(streamId, timeoutMs = 2000) {
+  const stream = activeStreams.get(streamId);
+  if (!stream?.ready) return Promise.resolve();
+  return Promise.race([
+    stream.ready,
+    new Promise(resolve => setTimeout(resolve, timeoutMs))
+  ]);
+}
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (!port.name.startsWith("summaryStream:")) return;
+  const streamId = port.name.slice("summaryStream:".length);
+  const stream = activeStreams.get(streamId);
+  if (!stream) {
+    port.postMessage({ type: "error", message: "Stream not found or expired." });
+    port.disconnect();
+    return;
+  }
+  stream.port = port;
+  if (stream.readyResolve) {
+    stream.readyResolve();
+    stream.readyResolve = null;
+  }
+  if (stream.buffer.length) {
+    for (const message of stream.buffer) {
+      port.postMessage(message);
+    }
+    stream.buffer = [];
+  }
+  port.onDisconnect.addListener(() => {
+    if (stream.port === port) {
+      stream.port = null;
+    }
+  });
+});
 
 // Create context menu item when extension is installed
 chrome.runtime.onInstalled.addListener(() => {
@@ -16,43 +92,53 @@ chrome.runtime.onInstalled.addListener(() => {
   clearExpiredCache();
 });
 
-// When menu item is clicked, run content.js to extract text
+// When menu item is clicked, extract text from the active tab
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "summarizePage") {
     chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      files: ["content.js"]
-      }).catch(err => {
-        console.error("Failed to execute content script:", err);
-        chrome.notifications.create({
-          type: 'basic',
-          iconUrl: 'icon.png',
-          title: 'Summarization Error',
-          message: 'Failed to extract page content. Please try again or use the popup instead.'
-        });
+      func: extractPageData
+    }).then(async (results) => {
+      const result = results?.[0]?.result;
+      const pageURL = tab.url || '';
+      const pageText = result?.text || '';
+      const pageTitle = result?.title || '';
+      if (!pageText || !pageText.trim()) {
+        throw new Error("No content found on this page. Please try another page.");
+      }
+
+      const content = buildContentFromText(pageText);
+      await startSummaryStream({
+        content,
+        pageURL,
+        title: pageTitle,
+        incrementCounter: false,
+        cacheKey: null
       });
+    }).catch(err => {
+      console.error("Failed to summarize page:", err);
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icon.png',
+        title: 'Summarization Error',
+        message: err.message || 'Failed to summarize this page. Please try again or use the popup instead.'
+      });
+    });
   }
 });
 
-// Listen for messages from content script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "summarize") {
-    summarizePage(message.content, sender.tab.url)
-      .then(summary => {
-        // Show summary in new tab
-        const encoded = encodeURIComponent(summary);
-        chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?text=${encoded}`) });
-      })
-      .catch(error => {
-        console.error("Summarization error:", error);
-        chrome.notifications.create({
-          type: 'basic',
-          iconUrl: 'icon.png',
-          title: 'Summarization Error',
-          message: error.message || 'An unexpected error occurred. Please check your settings and try again.'
-        });
-      });
-  }
+  if (message?.action !== "streamSummary") return;
+  startSummaryStream({
+    content: message.content,
+    pageURL: message.pageURL,
+    title: message.title || "",
+    incrementCounter: Boolean(message.incrementCounter),
+    cacheKey: message.cacheKey || null
+  })
+    .then((streamId) => sendResponse({ status: "started", streamId }))
+    .catch((error) => sendResponse({ status: "error", message: error.message }));
+  return true;
 });
 
 // Periodically clear expired cache entries (every 6 hours)
@@ -66,11 +152,17 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-async function summarizePage(content, pageURL) {
+async function summarizePage(content, pageURL, options = {}) {
   try {
+    const { onDelta } = options;
     const settings = await getSettings();
 
-    if (isDomainBlacklisted(settings.blacklistedUrls, pageURL)) {
+    const combinedBlacklist = combineBlacklists(
+      settings.defaultBlacklistedUrls,
+      settings.blacklistedUrls
+    );
+
+    if (isDomainBlacklisted(combinedBlacklist, pageURL)) {
       throw new Error("This is a restricted domain. Summarization is not allowed on this site.");
     }
 
@@ -82,15 +174,18 @@ async function summarizePage(content, pageURL) {
       throw new Error("API key is missing. Please set your API key in the extension settings.");
     }
 
-    const prompt = buildSummarizationPrompt(content, settings.language);
-    const summary = await fetchSummary(prompt, settings);
+    const adjustedContent = clampContentForProvider(content, settings);
+    const prompt = buildSummarizationPrompt(adjustedContent, settings.language);
+    const summary = onDelta
+      ? await fetchSummaryStream(prompt, settings, onDelta)
+      : await fetchSummary(prompt, settings);
 
     if (!summary || summary.trim().length === 0) {
       throw new Error("The AI model failed to generate a summary. Please try again later.");
     }
 
     // Save to history
-    await saveToHistory(pageURL, content, summary);
+    await saveToHistory(pageURL, summary, options.title || "");
     
     return summary;
   } catch (err) {
@@ -99,52 +194,75 @@ async function summarizePage(content, pageURL) {
   }
 }
 
-async function saveToHistory(url, content, summary) {
+async function saveToHistory(url, summary, title) {
   return new Promise((resolve, reject) => {
-    const timestamp = new Date().toISOString();
-    const historyItem = {
-      url,
-      summary,
-      timestamp,
-      contentPreview: createContentPreview(summary)
-    };
+    const historyItem = createHistoryItem(url, summary, title);
+    addHistoryItem(historyItem)
+      .then(() => resolve())
+      .catch(reject);
+  });
+}
 
-    chrome.storage.local.get(['summaryHistory'], (result) => {
+async function incrementPageCount() {
+  const result = await new Promise(resolve => chrome.storage.sync.get(['pageCount'], resolve));
+  const currentCount = result.pageCount || 0;
+  const newCount = currentCount + 1;
+  await new Promise((resolve, reject) => {
+    chrome.storage.sync.set({ pageCount: newCount }, () => {
       if (chrome.runtime.lastError) return reject(chrome.runtime.lastError);
-      
-      const history = result.summaryHistory || [];
-      history.unshift(historyItem); // Add to beginning
-      
-      // Keep only the last 50 summaries
-      if (history.length > 50) {
-        history.splice(50);
-      }
-      
-      chrome.storage.local.set({ summaryHistory: history }, () => {
-        if (chrome.runtime.lastError) return reject(chrome.runtime.lastError);
-        resolve();
-      });
+      resolve();
     });
   });
 }
 
-// Create content preview from summary
-function createContentPreview(summary) {
-  // Remove markdown formatting and extract content
-  let content = summary
-    .replace(/^#\s+.+$/m, '') // Remove title/headers
-    .replace(/\*\*Source:\*\*.*$/m, '') // Remove source line
-    .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
-    .replace(/\*(.*?)\*/g, '$1') // Remove italic
-    .replace(/^- /gm, '• ') // Convert bullet points
-    .replace(/\n/g, ' ') // Replace newlines with spaces
-    .replace(/\s+/g, ' ') // Collapse multiple spaces
-    .trim();
-  
-  // Truncate to a reasonable length
-  if (content.length > 100) {
-    content = content.substring(0, 100) + '...';
+async function startSummaryStream({ content, pageURL, title, incrementCounter, cacheKey }) {
+  const streamId = createStreamId();
+  registerStream(streamId);
+
+  chrome.tabs.create({
+    url: chrome.runtime.getURL(`results.html?streamId=${encodeURIComponent(streamId)}`)
+  });
+
+  try {
+    await waitForStreamReady(streamId);
+    const summary = await summarizePage(content, pageURL, {
+      title,
+      onDelta: (delta) => {
+        sendStreamMessage(streamId, { type: "delta", delta });
+      }
+    });
+
+    if (cacheKey) {
+      await cacheSummary(cacheKey, summary, { title, sourceUrl: pageURL });
+    }
+
+    if (incrementCounter) {
+      await incrementPageCount();
+    }
+
+    let summaryId = null;
+    try {
+      summaryId = await saveSummaryForView(summary, { title, sourceUrl: pageURL });
+    } catch (error) {
+      // Ignore summary store errors; the stream already delivered the content.
+    }
+
+    sendStreamMessage(streamId, { type: "done", summary, summaryId, title, sourceUrl: pageURL });
+  } catch (err) {
+    console.error("Summarize error:", err);
+    sendStreamMessage(streamId, {
+      type: "error",
+      message: err.message || "Failed to summarize this page."
+    });
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icon.png',
+      title: 'Summarization Error',
+      message: err.message || 'Failed to summarize this page. Please try again.'
+    });
+  } finally {
+    setTimeout(() => cleanupStream(streamId), 30000);
   }
-  
-  return content || 'No preview available';
+
+  return streamId;
 }

@@ -1,3 +1,6 @@
+import { createContentPreview } from './utils/preview.js';
+import { saveSummaryForView } from './utils/summaryStore.js';
+
 document.addEventListener("DOMContentLoaded", async () => {
   const historyTableBody = document.getElementById("historyTableBody");
   const clearHistoryBtn = document.getElementById("clearHistoryBtn");
@@ -37,18 +40,22 @@ async function loadHistory() {
     }
     
     historyTableBody.innerHTML = history.map((item, index) => {
-      // Extract title and source URL from the summary
-      const sourceUrl = extractSource(item.summary);
-      const preview = item.contentPreview || createSummaryPreview(item.summary);
+      const sourceUrl = item.sourceUrl || item.url || extractSource(item.summary);
+      const title = item.title || "";
+      const preview = item.contentPreview || createContentPreview(item.summary);
       const formattedDate = formatDate(item.timestamp);
       const formattedTime = formatTime(item.timestamp);
       
       // Fallbacks
       const displaySource = sourceUrl || 'Unknown Source';
+      const displayTitle = title || 'Untitled';
       
       return `
         <tr class="history-row" data-index="${index}">
-          <td class="url-cell">${displaySource}</td>
+          <td class="url-cell">
+            <div>${displayTitle}</div>
+            <div class="source-url">${displaySource}</div>
+          </td>
           <td class="preview-cell">${preview}</td>
           <td class="date-cell">${formattedDate} ${formattedTime}</td>
           <td class="delete-cell">
@@ -126,8 +133,18 @@ function viewFullSummary(index) {
     const history = result.summaryHistory || [];
     if (index >= 0 && index < history.length) {
       const item = history[index];
-      const encoded = encodeURIComponent(item.summary);
-      chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?text=${encoded}`) });
+      saveSummaryForView(item.summary, {
+        title: item.title || "",
+        sourceUrl: item.sourceUrl || item.url || ""
+      })
+        .then((id) => {
+          const encoded = encodeURIComponent(id);
+          chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?id=${encoded}`) });
+        })
+        .catch(() => {
+          const encoded = encodeURIComponent(item.summary);
+          chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?text=${encoded}`) });
+        });
     }
   });
 }
@@ -162,8 +179,6 @@ function extractSource(summary) {
 }
 
 
-
-// Create content preview from summary (fallback function)\nfunction createSummaryPreview(summary) {\n  // This function is kept for backward compatibility,\n  // but we now use the contentPreview field from the history item\n  // Remove markdown formatting and extract content\n  let content = summary\n    .replace(/^#\\s+.+$/m, '') // Remove title/headers\n    .replace(/\\*\\*Source:\\*\\*.*$/m, '') // Remove source line\n    .replace(/\\*\\*(.*?)\\*\\*/g, '$1') // Remove bold\n    .replace(/\\*(.*?)\\*/g, '$1') // Remove italic\n    .replace(/^- /gm, '• ') // Convert bullet points\n    .replace(/\\n/g, ' ') // Replace newlines with spaces\n    .replace(/\\s+/g, ' ') // Collapse multiple spaces\n    .trim();\n  \n  // Truncate to a reasonable length\n  if (content.length > 100) {\n    content = content.substring(0, 100) + '...';\n  }\n  \n  return content || 'No preview available';\n}
 
 function showNotification(message, type) {
   const notification = document.getElementById("notification");

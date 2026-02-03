@@ -1,8 +1,8 @@
 import { getPageContent, getPageUrl } from './utils/contentExtractor.js';
 import { getSettings } from './utils/settings.js';
-import { buildSummarizationPrompt } from './utils/promptBuilder.js';
-import { fetchSummary } from './utils/apiClient.js';
-import { isDomainBlacklisted } from './utils/domainBlacklist.js';
+import { combineBlacklists, isDomainBlacklisted } from './utils/domainBlacklist.js';
+import { getCachedSummary } from './utils/cache.js';
+import { saveSummaryForView } from './utils/summaryStore.js';
 
 document.addEventListener("DOMContentLoaded", async () => {
   const notification = document.getElementById("notification");
@@ -30,19 +30,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Check cache first
       const cachedSummary = await getCachedSummary(pageURL);
-      if (cachedSummary) {
+      if (cachedSummary?.summary) {
         await incrementCounter();
-        return showSummary(cachedSummary);
+        return showSummary(cachedSummary.summary, {
+          title: cachedSummary.title || "",
+          sourceUrl: cachedSummary.sourceUrl || pageURL
+        });
       }
 
-      const combinedBlacklist = [settings.defaultBlacklistedUrls, settings.blacklistedUrls].join(';');
+      const combinedBlacklist = combineBlacklists(
+        settings.defaultBlacklistedUrls,
+        settings.blacklistedUrls
+      );
 
       if (isDomainBlacklisted(combinedBlacklist, pageURL)) {
         throw new Error("This is a restricted domain. Summarization is not allowed on this site.");
       }
 
-      const content = await getPageContent();
-      if (!content) {
+      const pageData = await getPageContent();
+      if (!pageData?.content) {
         throw new Error("No content found on this page. Please try another page.");
       }
 
@@ -50,18 +56,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         throw new Error("API key is missing. Please set your API key in the extension settings.");
       }
 
-      const prompt = buildSummarizationPrompt(content, settings.language);
-      const summary = await fetchSummary(prompt, settings);
-
-      if (!summary || summary.trim().length === 0) {
-        throw new Error("The AI model failed to generate a summary. Please try again later.");
+      const response = await chrome.runtime.sendMessage({
+        action: "streamSummary",
+        content: pageData.content,
+        pageURL,
+        title: pageData.title,
+        incrementCounter: true,
+        cacheKey: pageURL
+      });
+      if (response?.status === "error") {
+        throw new Error(response.message || "Failed to start streaming summary.");
       }
-
-      // Cache the summary
-      await cacheSummary(pageURL, summary);
-      
-      await incrementCounter();
-      showSummary(summary);
 
     } catch (err) {
       console.error("Summarize error:", err);
@@ -74,9 +79,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 });
 
-function showSummary(summaryText) {
-  const encoded = encodeURIComponent(summaryText);
-  chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?text=${encoded}`) });
+async function showSummary(summaryText, meta = {}) {
+  try {
+    const id = await saveSummaryForView(summaryText, meta);
+    chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?id=${encodeURIComponent(id)}`) });
+  } catch (error) {
+    const encoded = encodeURIComponent(summaryText);
+    chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?text=${encoded}`) });
+  }
 }
 
 // Show notification function
@@ -111,56 +121,4 @@ async function updateCounterDisplay() {
   const result = await new Promise(resolve => chrome.storage.sync.get(['pageCount'], resolve));
   const count = result.pageCount || 0;
   document.getElementById("pagesSummarized").textContent = count;
-}
-
-// Cache functions
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
-
-async function getCachedSummary(url) {
-  try {
-    const result = await chrome.storage.local.get(['summaryCache']);
-    const cache = result.summaryCache || {};
-    
-    const cachedItem = cache[url];
-    if (!cachedItem) return null;
-    
-    const now = Date.now();
-    if (now - cachedItem.timestamp > CACHE_DURATION) {
-      // Expired, remove from cache
-      delete cache[url];
-      await chrome.storage.local.set({ summaryCache: cache });
-      return null;
-    }
-    
-    return cachedItem.summary;
-  } catch (error) {
-    console.error("Error retrieving cached summary:", error);
-    return null;
-  }
-}
-
-async function cacheSummary(url, summary) {
-  try {
-    const result = await chrome.storage.local.get(['summaryCache']);
-    const cache = result.summaryCache || {};
-    
-    cache[url] = {
-      summary,
-      timestamp: Date.now()
-    };
-    
-    // Keep cache size manageable
-    const urls = Object.keys(cache);
-    if (urls.length > 100) {
-      // Remove oldest entries
-      const sortedUrls = urls.sort((a, b) => cache[b].timestamp - cache[a].timestamp);
-      for (let i = 100; i < sortedUrls.length; i++) {
-        delete cache[sortedUrls[i]];
-      }
-    }
-    
-    await chrome.storage.local.set({ summaryCache: cache });
-  } catch (error) {
-    console.error("Error caching summary:", error);
-  }
 }

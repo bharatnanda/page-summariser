@@ -1,20 +1,37 @@
 const MAX_CHARS = 60000;
 
+export function extractPageData() {
+  const selection = window.getSelection()?.toString() || "";
+  const text = selection.trim().length > 0
+    ? selection.trim()
+    : document.body?.innerText?.trim() || "";
+
+  const ogTitle = document.querySelector('meta[property="og:title"]')?.content || "";
+  const title = (ogTitle || document.title || "").trim();
+
+  return { text, title };
+}
+
+export function buildContentFromText(pageText) {
+  const text = (pageText || "").trim();
+  if (!text) return "";
+
+  const fullContent = text.trim();
+  return fullContent.length > MAX_CHARS
+    ? fullContent.slice(0, MAX_CHARS)
+    : fullContent;
+}
+
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) throw new Error("No active tab found. Please try again.");
   return tab;
 }
 
-function extractPageContent() {
-  const sel = window.getSelection()?.toString() || "";
-  return sel.trim().length > 0 ? sel.trim() : document.body?.innerText?.trim() || "";
-}
-
 async function executeContentScript(tabId) {
   const [{ result }] = await chrome.scripting.executeScript({
     target: { tabId },
-    func: extractPageContent,
+    func: extractPageData,
   });
   return result;
 }
@@ -23,9 +40,12 @@ export async function getPageContent() {
   try {
     const tab = await getActiveTab();
     const tabUrl = await getPageUrl();
-    const content = `Source: ${tabUrl}
-` + await executeContentScript(tab.id);
-    return content.length > MAX_CHARS ? content.slice(0, MAX_CHARS) : content;
+    const pageData = await executeContentScript(tab.id);
+    return {
+      content: buildContentFromText(pageData?.text),
+      title: pageData?.title || "",
+      sourceUrl: tabUrl || ""
+    };
   } catch (err) {
     console.error("Failed to get page content:", err);
     throw new Error("No relevant content found to summarize on this page.");

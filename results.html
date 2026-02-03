@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="assets/styles.css">
   <style>
     body {
-      background: var(--gradient-bg);
+      background: var(--app-bg);
       color: var(--dark-text);
       line-height: 1.6;
       padding: 20px;
@@ -16,14 +16,14 @@
     .container {
       max-width: 900px;
       margin: 0 auto;
-      background: white;
-      border-radius: 12px;
+      background: var(--surface);
+      border-radius: 10px;
       box-shadow: var(--card-shadow);
       overflow: hidden;
     }
 
     header {
-      background: white;
+      background: var(--surface);
       color: var(--dark-text);
       padding: 25px 30px;
       display: flex;
@@ -65,11 +65,61 @@
     }
 
     #summary {
-      background: var(--light-bg);
+      background: var(--surface-subtle);
       padding: 25px;
       border-radius: 10px;
       line-height: 1.7;
       font-size: 1.05rem;
+    }
+
+    .article-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .article-title {
+      font-weight: 600;
+      color: var(--dark-text);
+      font-size: 1.05rem;
+    }
+
+    .article-source {
+      color: var(--primary);
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    .article-source:hover {
+      text-decoration: underline;
+    }
+
+    .streaming-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      color: var(--secondary);
+    }
+
+    .streaming-indicator::after {
+      content: "…";
+      font-size: 1.1em;
+      color: var(--primary);
+      letter-spacing: 0.18em;
+      animation: dots 1.2s steps(1, end) infinite;
+    }
+
+    @keyframes dots {
+      0% { content: "···"; }
+      33% { content: "··"; }
+      66% { content: "·"; }
+      100% { content: "···"; }
     }
 
     #summary h1,
@@ -117,7 +167,7 @@
     }
 
     #summary code {
-      background-color: #e9ecef;
+      background-color: #e8eaed;
       padding: 2px 6px;
       border-radius: 4px;
       font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
@@ -125,8 +175,8 @@
     }
 
     #summary pre {
-      background: #2d2d2d;
-      color: #f8f8f2;
+      background: #1f2937;
+      color: #f8f9fa;
       padding: 16px;
       border-radius: 6px;
       overflow-x: auto;
@@ -143,7 +193,7 @@
       border-left: 4px solid var(--primary);
       padding: 10px 20px;
       margin: 1.5em 0;
-      background: rgba(74, 144, 226, 0.05);
+      background: rgba(11, 87, 208, 0.08);
     }
 
     #summary table {
@@ -160,7 +210,7 @@
     }
 
     #summary table th {
-      background: rgba(74, 144, 226, 0.1);
+      background: var(--table-header-bg);
       font-weight: 600;
     }
 
@@ -242,6 +292,10 @@
     </header>
 
     <div class="content">
+      <div id="articleMeta" class="article-meta" hidden>
+        <div class="article-title" id="articleTitle"></div>
+        <a class="article-source" id="articleSource" href="#" target="_blank" rel="noopener"></a>
+      </div>
       <div id="summary">
         <p>Loading summary...</p>
       </div>
@@ -255,6 +309,6 @@
   <div id="notification" class="notification"></div>
 
   <script src="markdown.js"></script>
-  <script src="results.js"></script>
+  <script type="module" src="results.js"></script>
 </body>
 </html>
