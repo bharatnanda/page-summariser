@@ -1,3 +1,18 @@
+export function clampContentForProvider(content, settings) {
+  if (!content) return "";
+
+  const provider = (settings?.provider || "").toLowerCase();
+  let maxChars = 60000;
+
+  if (provider === "gemini" || provider === "ollama") {
+    maxChars = 30000;
+  } else if (provider === "openai" || provider === "azure") {
+    maxChars = 50000;
+  }
+
+  return content.length > maxChars ? content.slice(0, maxChars) : content;
+}
+
 export function buildSummarizationPrompt(content, language="english") {
   return `
 You are a professional summarizer.  

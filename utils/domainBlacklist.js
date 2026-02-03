@@ -41,3 +41,14 @@ export function isDomainBlacklisted(blacklistString, domainOrUrl) {
 
   return blacklistCache.get(key).some(r => r.test(hostname));
 }
+
+/**
+ * Combine default and custom blacklist strings into one semicolon-separated string.
+ * Trims and skips empty entries.
+ */
+export function combineBlacklists(defaultList, customList) {
+  return [defaultList, customList]
+    .map(value => (value || '').trim())
+    .filter(Boolean)
+    .join(';');
+}

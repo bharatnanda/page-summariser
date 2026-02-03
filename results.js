@@ -1,4 +1,16 @@
-document.addEventListener("DOMContentLoaded", () => {
+import { loadSummaryForView } from './utils/summaryStore.js';
+import { addHistoryItem, createHistoryItem } from './utils/historyStore.js';
+
+function escapeHtml(value) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("summary");
   const copyBtn = document.getElementById("copyBtn");
   const downloadBtn = document.getElementById("downloadBtn");
@@ -9,18 +21,33 @@ document.addEventListener("DOMContentLoaded", () => {
   // Get summary text from URL query params
   const params = new URLSearchParams(window.location.search);
   const rawText = params.get("text");
+  const summaryId = params.get("id");
   let decodedText = "No summary available.";
 
   try {
-    if (rawText) decodedText = decodeURIComponent(rawText);
+    if (summaryId) {
+      const stored = await loadSummaryForView(summaryId);
+      if (stored) {
+        decodedText = stored;
+      }
+    } else if (rawText) {
+      decodedText = decodeURIComponent(rawText);
+    }
   } catch (err) {
     console.error("Failed to decode URI component:", err);
-    decodedText = rawText;
+    decodedText = rawText || decodedText;
   }
 
   // Render markdown if available
   if (window.marked) {
-    container.innerHTML = marked.parse(decodedText, { breaks: true });
+    const renderer = new marked.Renderer();
+    renderer.html = (text) => escapeHtml(text);
+    container.innerHTML = marked.parse(decodedText, {
+      breaks: true,
+      renderer,
+      mangle: false,
+      headerIds: false
+    });
   } else {
     container.textContent = decodedText;
   }
@@ -66,28 +93,19 @@ document.addEventListener("DOMContentLoaded", () => {
       const url = sourceUrl || tab?.url || "Unknown URL";
       
       // Create a history item
-      const timestamp = new Date().toISOString();
-      const historyItem = {
-        url,
-        summary: decodedText,
-        timestamp,
-        contentPreview: createContentPreview(decodedText)
-      };
+      const historyItem = createHistoryItem(url, decodedText);
 
       // Save to history
-      chrome.storage.local.get(['summaryHistory'], (result) => {
-        const history = result.summaryHistory || [];
-        history.unshift(historyItem); // Add to beginning
-        
-        // Keep only the last 50 summaries
-        if (history.length > 50) {
-          history.splice(50);
-        }
-        
-        chrome.storage.local.set({ summaryHistory: history }, () => {
-          showNotification("Summary saved to history!", "success");
-        });
-      });
+      const result = await addHistoryItem(historyItem);
+      if (result.status === 'duplicate') {
+        showNotification("Summary already in history.", "success");
+        return;
+      }
+      if (result.status === 'saved_trimmed') {
+        showNotification("History saved (trimmed to fit storage).", "success");
+        return;
+      }
+      showNotification("Summary saved to history!", "success");
     } catch (error) {
       console.error("Error saving to history:", error);
       showNotification("Failed to save summary", "error");
@@ -109,24 +127,4 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 3000);
   }
   
-  // Create content preview from summary
-  function createContentPreview(summary) {
-    // Remove markdown formatting and extract content
-    let content = summary
-      .replace(/^#\s+.+$/m, '') // Remove title/headers
-      .replace(/\*\*Source:\*\*.*$/m, '') // Remove source line
-      .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
-      .replace(/\*(.*?)\*/g, '$1') // Remove italic
-      .replace(/^- /gm, '• ') // Convert bullet points
-      .replace(/\n/g, ' ') // Replace newlines with spaces
-      .replace(/\s+/g, ' ') // Collapse multiple spaces
-      .trim();
-    
-    // Truncate to a reasonable length
-    if (content.length > 100) {
-      content = content.substring(0, 100) + '...';
-    }
-    
-    return content || 'No preview available';
-  }
 });

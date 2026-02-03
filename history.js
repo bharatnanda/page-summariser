@@ -1,3 +1,6 @@
+import { createContentPreview } from './utils/preview.js';
+import { saveSummaryForView } from './utils/summaryStore.js';
+
 document.addEventListener("DOMContentLoaded", async () => {
   const historyTableBody = document.getElementById("historyTableBody");
   const clearHistoryBtn = document.getElementById("clearHistoryBtn");
@@ -39,7 +42,7 @@ async function loadHistory() {
     historyTableBody.innerHTML = history.map((item, index) => {
       // Extract title and source URL from the summary
       const sourceUrl = extractSource(item.summary);
-      const preview = item.contentPreview || createSummaryPreview(item.summary);
+      const preview = item.contentPreview || createContentPreview(item.summary);
       const formattedDate = formatDate(item.timestamp);
       const formattedTime = formatTime(item.timestamp);
       
@@ -126,8 +129,15 @@ function viewFullSummary(index) {
     const history = result.summaryHistory || [];
     if (index >= 0 && index < history.length) {
       const item = history[index];
-      const encoded = encodeURIComponent(item.summary);
-      chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?text=${encoded}`) });
+      saveSummaryForView(item.summary)
+        .then((id) => {
+          const encoded = encodeURIComponent(id);
+          chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?id=${encoded}`) });
+        })
+        .catch(() => {
+          const encoded = encodeURIComponent(item.summary);
+          chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?text=${encoded}`) });
+        });
     }
   });
 }
@@ -162,8 +172,6 @@ function extractSource(summary) {
 }
 
 
-
-// Create content preview from summary (fallback function)\nfunction createSummaryPreview(summary) {\n  // This function is kept for backward compatibility,\n  // but we now use the contentPreview field from the history item\n  // Remove markdown formatting and extract content\n  let content = summary\n    .replace(/^#\\s+.+$/m, '') // Remove title/headers\n    .replace(/\\*\\*Source:\\*\\*.*$/m, '') // Remove source line\n    .replace(/\\*\\*(.*?)\\*\\*/g, '$1') // Remove bold\n    .replace(/\\*(.*?)\\*/g, '$1') // Remove italic\n    .replace(/^- /gm, '• ') // Convert bullet points\n    .replace(/\\n/g, ' ') // Replace newlines with spaces\n    .replace(/\\s+/g, ' ') // Collapse multiple spaces\n    .trim();\n  \n  // Truncate to a reasonable length\n  if (content.length > 100) {\n    content = content.substring(0, 100) + '...';\n  }\n  \n  return content || 'No preview available';\n}
 
 function showNotification(message, type) {
   const notification = document.getElementById("notification");

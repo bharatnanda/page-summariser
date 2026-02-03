@@ -25,7 +25,7 @@ function updateProviderFields() {
  * Resets all form fields to their default values and clears the status message.
  */
 function resetForm() {
-  document.getElementById("provider").value = "gemini";
+  document.getElementById("provider").value = "openai";
   document.getElementById("apiKey").value = "";
   document.getElementById("baseUrl").value = "";
   document.getElementById("deployment").value = "";
