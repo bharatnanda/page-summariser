@@ -3,7 +3,7 @@ const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 /**
  * Get cached summary for a URL if it exists and is not expired
  * @param {string} url - The page URL
- * @returns {Promise<string|null>} - The cached summary or null if not found/expired
+ * @returns {Promise<object|null>} - The cached summary payload or null if not found/expired
  */
 export async function getCachedSummary(url) {
   try {
@@ -21,7 +21,7 @@ export async function getCachedSummary(url) {
       return null;
     }
     
-    return cachedItem.summary;
+    return cachedItem;
   } catch (error) {
     console.error("Error retrieving cached summary:", error);
     return null;
@@ -32,15 +32,18 @@ export async function getCachedSummary(url) {
  * Save a summary to cache
  * @param {string} url - The page URL
  * @param {string} summary - The summary text
+ * @param {object} meta - Optional metadata
  * @returns {Promise<void>}
  */
-export async function cacheSummary(url, summary) {
+export async function cacheSummary(url, summary, meta = {}) {
   try {
     const result = await chrome.storage.local.get(['summaryCache']);
     const cache = result.summaryCache || {};
     
     cache[url] = {
       summary,
+      title: meta.title || "",
+      sourceUrl: meta.sourceUrl || "",
       timestamp: Date.now()
     };
     

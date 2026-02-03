@@ -24,19 +24,6 @@ function resolveOpenAIUrl(baseUrl, path) {
   }
 }
 
-function parseStreamEvent(event, onDelta) {
-  if (event.type === "response.output_text.delta" && typeof event.delta === "string") {
-    onDelta?.(event.delta);
-    return event.delta;
-  }
-
-  if (event.type === "response.output_text.done" && typeof event.text === "string") {
-    return event.text;
-  }
-
-  return null;
-}
-
 export async function callOpenAI(prompt, settings) {
   const { apiKey, baseUrl, model } = settings;
   const url = baseUrl || "https://api.openai.com/v1/chat/completions";
@@ -130,13 +117,13 @@ export async function callOpenAIStream(prompt, settings, onDelta) {
 
   let fullText = "";
   await readSseStream(res, (event) => {
-    const value = parseStreamEvent(event, (delta) => onDelta?.(delta, fullText + delta));
-    if (typeof value === "string") {
-      if (value.length >= fullText.length) {
-        fullText = value;
-      } else {
-        fullText += value;
-      }
+    if (event?.type === "response.output_text.delta" && typeof event.delta === "string") {
+      fullText += event.delta;
+      onDelta?.(event.delta, fullText);
+      return;
+    }
+    if (event?.type === "response.output_text.done" && typeof event.text === "string") {
+      fullText = event.text;
     }
   });
 

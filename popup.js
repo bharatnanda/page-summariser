@@ -30,9 +30,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // Check cache first
       const cachedSummary = await getCachedSummary(pageURL);
-      if (cachedSummary) {
+      if (cachedSummary?.summary) {
         await incrementCounter();
-        return showSummary(cachedSummary);
+        return showSummary(cachedSummary.summary, {
+          title: cachedSummary.title || "",
+          sourceUrl: cachedSummary.sourceUrl || pageURL
+        });
       }
 
       const combinedBlacklist = combineBlacklists(
@@ -76,9 +79,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 });
 
-async function showSummary(summaryText) {
+async function showSummary(summaryText, meta = {}) {
   try {
-    const id = await saveSummaryForView(summaryText);
+    const id = await saveSummaryForView(summaryText, meta);
     chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?id=${encodeURIComponent(id)}`) });
   } catch (error) {
     const encoded = encodeURIComponent(summaryText);

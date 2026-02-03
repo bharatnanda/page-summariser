@@ -233,7 +233,7 @@ async function startSummaryStream({ content, pageURL, title, incrementCounter, c
     });
 
     if (cacheKey) {
-      await cacheSummary(cacheKey, summary);
+      await cacheSummary(cacheKey, summary, { title, sourceUrl: pageURL });
     }
 
     if (incrementCounter) {

@@ -39,6 +39,16 @@ export async function readSseStream(response, onEvent) {
       }
     }
   }
+
+  const remaining = `${buffer}\n${dataLines.join("\n")}`.trim();
+  if (remaining && remaining !== "[DONE]") {
+    try {
+      const parsed = JSON.parse(remaining);
+      onEvent?.(parsed);
+    } catch (error) {
+      // Ignore trailing parse errors.
+    }
+  }
 }
 
 export async function readNdjsonStream(response, onEvent) {
@@ -70,6 +80,16 @@ export async function readNdjsonStream(response, onEvent) {
       }
 
       onEvent?.(parsed);
+    }
+  }
+
+  const remaining = buffer.trim();
+  if (remaining) {
+    try {
+      const parsed = JSON.parse(remaining);
+      onEvent?.(parsed);
+    } catch (error) {
+      // Ignore trailing parse errors.
     }
   }
 }
