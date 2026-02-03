@@ -10,10 +10,12 @@ function trimSummaryForHistory(summary) {
   return `${summary.slice(0, MAX_HISTORY_SUMMARY_CHARS)}...`;
 }
 
-export function createHistoryItem(url, summary) {
+export function createHistoryItem(url, summary, title = "") {
   const trimmedSummary = trimSummaryForHistory(summary);
   return {
     url,
+    sourceUrl: url,
+    title: title || "",
     summary: trimmedSummary,
     timestamp: new Date().toISOString(),
     contentPreview: createContentPreview(trimmedSummary)

@@ -1,9 +1,7 @@
 import { getPageContent, getPageUrl } from './utils/contentExtractor.js';
 import { getSettings } from './utils/settings.js';
-import { buildSummarizationPrompt, clampContentForProvider } from './utils/promptBuilder.js';
-import { fetchSummary } from './utils/apiClient.js';
 import { combineBlacklists, isDomainBlacklisted } from './utils/domainBlacklist.js';
-import { getCachedSummary, cacheSummary } from './utils/cache.js';
+import { getCachedSummary } from './utils/cache.js';
 import { saveSummaryForView } from './utils/summaryStore.js';
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -46,8 +44,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         throw new Error("This is a restricted domain. Summarization is not allowed on this site.");
       }
 
-      const content = await getPageContent();
-      if (!content) {
+      const pageData = await getPageContent();
+      if (!pageData?.content) {
         throw new Error("No content found on this page. Please try another page.");
       }
 
@@ -55,19 +53,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         throw new Error("API key is missing. Please set your API key in the extension settings.");
       }
 
-      const adjustedContent = clampContentForProvider(content, settings);
-      const prompt = buildSummarizationPrompt(adjustedContent, settings.language);
-      const summary = await fetchSummary(prompt, settings);
-
-      if (!summary || summary.trim().length === 0) {
-        throw new Error("The AI model failed to generate a summary. Please try again later.");
+      const response = await chrome.runtime.sendMessage({
+        action: "streamSummary",
+        content: pageData.content,
+        pageURL,
+        title: pageData.title,
+        incrementCounter: true,
+        cacheKey: pageURL
+      });
+      if (response?.status === "error") {
+        throw new Error(response.message || "Failed to start streaming summary.");
       }
-
-      // Cache the summary
-      await cacheSummary(pageURL, summary);
-      
-      await incrementCounter();
-      showSummary(summary);
 
     } catch (err) {
       console.error("Summarize error:", err);

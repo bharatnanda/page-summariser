@@ -40,18 +40,22 @@ async function loadHistory() {
     }
     
     historyTableBody.innerHTML = history.map((item, index) => {
-      // Extract title and source URL from the summary
-      const sourceUrl = extractSource(item.summary);
+      const sourceUrl = item.sourceUrl || item.url || extractSource(item.summary);
+      const title = item.title || "";
       const preview = item.contentPreview || createContentPreview(item.summary);
       const formattedDate = formatDate(item.timestamp);
       const formattedTime = formatTime(item.timestamp);
       
       // Fallbacks
       const displaySource = sourceUrl || 'Unknown Source';
+      const displayTitle = title || 'Untitled';
       
       return `
         <tr class="history-row" data-index="${index}">
-          <td class="url-cell">${displaySource}</td>
+          <td class="url-cell">
+            <div>${displayTitle}</div>
+            <div class="source-url">${displaySource}</div>
+          </td>
           <td class="preview-cell">${preview}</td>
           <td class="date-cell">${formattedDate} ${formattedTime}</td>
           <td class="delete-cell">
@@ -129,7 +133,10 @@ function viewFullSummary(index) {
     const history = result.summaryHistory || [];
     if (index >= 0 && index < history.length) {
       const item = history[index];
-      saveSummaryForView(item.summary)
+      saveSummaryForView(item.summary, {
+        title: item.title || "",
+        sourceUrl: item.sourceUrl || item.url || ""
+      })
         .then((id) => {
           const encoded = encodeURIComponent(id);
           chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?id=${encoded}`) });

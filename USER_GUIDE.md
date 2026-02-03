@@ -174,7 +174,7 @@ For complete information about how we handle your data, please read our [Privacy
 1. **Use on Article Pages**: News articles and blog posts work best
 2. **Avoid Homepage**: Homepages often have too much varied content
 3. **Check Language**: Ensure content matches your summary language
-4. **Review Settings**: Adjust temperature for preferred style
+4. **Review Settings**: Confirm provider, model, and language preferences
 
 ### Managing Costs
 1. **Use Caching**: The extension caches summaries for 30 minutes

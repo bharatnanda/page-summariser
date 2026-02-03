@@ -1,4 +1,5 @@
 import { extractTextFromResponse } from '../responseParser.js';
+import { readNdjsonStream } from '../streaming.js';
 
 /**
  * Calls Ollama's /api/chat endpoint for summarization.
@@ -7,9 +8,9 @@ import { extractTextFromResponse } from '../responseParser.js';
  * @returns {Promise<string>} - Summary response.
  */
 export async function callOllama(prompt, settings) {
-  const { apiKey, baseUrl, model, temperature } = settings;
+  const { apiKey, baseUrl, model } = settings;
 
-  const resolvedBaseUrl = baseUrl?.trim() || "http://localhost:11434";
+  const resolvedBaseUrl = (baseUrl?.trim() || "http://localhost:11434").replace(/\/v1\/?$/, "");
   const url = `${resolvedBaseUrl.replace(/\/$/, "")}/api/chat`;
 
   const headers = {
@@ -28,9 +29,7 @@ export async function callOllama(prompt, settings) {
       body: JSON.stringify({
         model: model || "gemma3n",
         messages: [{ role: "user", content: prompt.trim() }],
-        options: {
-          temperature: temperature ?? 0.7
-        },
+        options: undefined,
         stream: false
       })
     });
@@ -72,6 +71,79 @@ export async function callOllama(prompt, settings) {
       throw new Error("Unable to connect to Ollama. Please ensure Ollama is installed and running on your system.");
     }
     
+    throw error;
+  }
+}
+
+/**
+ * Calls Ollama's /api/chat endpoint with streaming enabled.
+ * @param {string} prompt - The text prompt to summarize.
+ * @param {object} settings - User's model settings.
+ * @param {function} onDelta - Callback for streaming deltas.
+ * @returns {Promise<string>} - Summary response.
+ */
+export async function callOllamaStream(prompt, settings, onDelta) {
+  const { apiKey, baseUrl, model } = settings;
+
+  const resolvedBaseUrl = (baseUrl?.trim() || "http://localhost:11434").replace(/\/v1\/?$/, "");
+  const url = `${resolvedBaseUrl.replace(/\/$/, "")}/api/chat`;
+
+  const headers = {
+    "Content-Type": "application/json"
+  };
+
+  // Optional API key support (disabled for local Ollama)
+  // if (apiKey) {
+  //   headers["Authorization"] = `Bearer ${apiKey}`;
+  // }
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        model: model || "gemma3n",
+        messages: [{ role: "user", content: prompt.trim() }],
+        options: undefined,
+        stream: true
+      })
+    });
+
+    if (!res.ok) {
+      let errorMessage = res.statusText;
+      try {
+        const data = await res.json();
+        errorMessage = data?.error || errorMessage;
+      } catch (error) {
+        // Ignore JSON parse errors and use statusText instead.
+      }
+
+      if (res.status === 404) {
+        throw new Error(`Model not found. Please check if the model "${model || "gemma3n"}" is available in Ollama.`);
+      } else if (res.status >= 500) {
+        throw new Error("Ollama service is temporarily unavailable. Please check if Ollama is running properly.");
+      }
+
+      throw new Error(`Ollama API Error (${res.status}): ${errorMessage}`);
+    }
+
+    let fullText = "";
+    await readNdjsonStream(res, (event) => {
+      const delta = event?.message?.content || event?.response || "";
+      if (delta) {
+        fullText += delta;
+        onDelta?.(delta, fullText);
+      }
+    });
+
+    return fullText;
+  } catch (error) {
+    console.error("Error calling Ollama API:", error);
+
+    if (error.message.includes("fetch")) {
+      throw new Error("Unable to connect to Ollama. Please ensure Ollama is installed and running on your system.");
+    }
+
     throw error;
   }
 }

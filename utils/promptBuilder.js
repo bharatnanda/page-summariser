@@ -22,7 +22,6 @@ Read the webpage content provided below and produce a clear, concise summary in 
 
 ## Length and Structure
 
-- Include article title and source url.
 - Important: Must keep the summary under 200 words.
 - Ensure to use bullet points, short paragraphs, and tables as needed to improve clarity and readability.
 

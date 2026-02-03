@@ -34,7 +34,7 @@ function pruneStore(store) {
   return modified;
 }
 
-export async function saveSummaryForView(summary) {
+export async function saveSummaryForView(summary, meta = {}) {
   const storage = getStorageArea();
   const result = await storage.get([STORAGE_KEY]);
   const store = result[STORAGE_KEY] || {};
@@ -42,6 +42,8 @@ export async function saveSummaryForView(summary) {
 
   store[id] = {
     summary,
+    title: meta.title || "",
+    sourceUrl: meta.sourceUrl || "",
     timestamp: Date.now()
   };
 
@@ -58,5 +60,5 @@ export async function loadSummaryForView(id) {
   if (pruneStore(store)) {
     await storage.set({ [STORAGE_KEY]: store });
   }
-  return store[id]?.summary || null;
+  return store[id] || null;
 }

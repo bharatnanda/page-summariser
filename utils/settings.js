@@ -1,16 +1,25 @@
 export async function getSettings() {
-  const keys = ["provider", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "temperature", "blacklistedUrls", "defaultBlacklistedUrls"];
+  const keys = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "blacklistedUrls", "defaultBlacklistedUrls"];
   const settings = await new Promise(res => chrome.storage.sync.get(keys, res));
 
+  const provider = (settings.provider || "openai").toLowerCase();
+  const providerSettings = settings.providerSettings || {};
+  const resolved = providerSettings[provider] || {
+    apiKey: settings.apiKey || "",
+    baseUrl: settings.baseUrl || "",
+    deployment: settings.deployment || "",
+    apiVersion: settings.apiVersion || "",
+    model: settings.model || ""
+  };
+
   return {
-    provider: (settings.provider || "openai").toLowerCase(),
-    apiKey: (settings.apiKey || "").trim(),
-    baseUrl: (settings.baseUrl || "").trim(),
-    deployment: (settings.deployment || "").trim(),
-    apiVersion: (settings.apiVersion || "").trim(),
-    model: (settings.model || "").trim(),
+    provider,
+    apiKey: (resolved.apiKey || "").trim(),
+    baseUrl: (resolved.baseUrl || "").trim(),
+    deployment: (resolved.deployment || "").trim(),
+    apiVersion: (resolved.apiVersion || "").trim(),
+    model: (resolved.model || "").trim(),
     language: (settings.language || "").trim(),
-    temperature: typeof settings.temperature === "number" ? settings.temperature : 0.7,
     blacklistedUrls: (settings.blacklistedUrls || "").trim(),
     defaultBlacklistedUrls: (settings.defaultBlacklistedUrls || "").trim(),
   };
