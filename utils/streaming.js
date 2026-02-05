@@ -1,3 +1,9 @@
+/**
+ * Read a server-sent events response and emit parsed JSON events.
+ * @param {Response} response
+ * @param {(event: any) => void} onEvent
+ * @returns {Promise<void>}
+ */
 export async function readSseStream(response, onEvent) {
   if (!response.body) {
     throw new Error("Streaming response body is empty.");
@@ -51,6 +57,12 @@ export async function readSseStream(response, onEvent) {
   }
 }
 
+/**
+ * Read a newline-delimited JSON response and emit parsed events.
+ * @param {Response} response
+ * @param {(event: any) => void} onEvent
+ * @returns {Promise<void>}
+ */
 export async function readNdjsonStream(response, onEvent) {
   if (!response.body) {
     throw new Error("Streaming response body is empty.");

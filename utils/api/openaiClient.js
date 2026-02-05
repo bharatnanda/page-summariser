@@ -1,6 +1,12 @@
 import { extractTextFromResponse } from '../responseParser.js';
 import { readSseStream } from '../streaming.js';
 
+/**
+ * Resolve a base URL to the OpenAI REST endpoint path.
+ * @param {string} baseUrl
+ * @param {string} path
+ * @returns {string}
+ */
 function resolveOpenAIUrl(baseUrl, path) {
   if (!baseUrl) return `https://api.openai.com/v1/${path}`;
   try {
@@ -24,6 +30,12 @@ function resolveOpenAIUrl(baseUrl, path) {
   }
 }
 
+/**
+ * Call OpenAI chat completions (non-streaming).
+ * @param {string} prompt
+ * @param {{ apiKey: string, baseUrl?: string, model?: string }} settings
+ * @returns {Promise<string>}
+ */
 export async function callOpenAI(prompt, settings) {
   const { apiKey, baseUrl, model } = settings;
   const url = baseUrl || "https://api.openai.com/v1/chat/completions";
@@ -66,6 +78,13 @@ export async function callOpenAI(prompt, settings) {
   return extractTextFromResponse(data, "openai");
 }
 
+/**
+ * Call OpenAI Responses API with SSE streaming.
+ * @param {string} prompt
+ * @param {{ apiKey: string, baseUrl?: string, model?: string }} settings
+ * @param {(delta: string, fullText: string) => void} onDelta
+ * @returns {Promise<string>}
+ */
 export async function callOpenAIStream(prompt, settings, onDelta) {
   const { apiKey, baseUrl, model } = settings;
   const url = resolveOpenAIUrl(baseUrl, "responses");

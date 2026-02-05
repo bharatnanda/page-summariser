@@ -3,6 +3,12 @@ import { callAzure, callAzureStream } from './api/azureClient.js';
 import { callGemini, callGeminiStream } from './api/geminiClient.js';
 import { callOllama, callOllamaStream } from './api/ollamaClient.js';
 
+/**
+ * Fetch a full summary response (non-streaming).
+ * @param {string} prompt
+ * @param {{ provider: string }} settings
+ * @returns {Promise<string>}
+ */
 export async function fetchSummary(prompt, settings) {
   try {
     switch (settings.provider) {
@@ -24,6 +30,13 @@ export async function fetchSummary(prompt, settings) {
   }
 }
 
+/**
+ * Stream a summary response when supported by the provider.
+ * @param {string} prompt
+ * @param {{ provider: string }} settings
+ * @param {(delta: string, fullText: string) => void} onDelta
+ * @returns {Promise<string>}
+ */
 export async function fetchSummaryStream(prompt, settings, onDelta) {
   try {
     switch (settings.provider) {

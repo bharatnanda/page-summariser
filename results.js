@@ -1,6 +1,11 @@
 import { loadSummaryForView } from './utils/summaryStore.js';
 import { addHistoryItem, createHistoryItem } from './utils/historyStore.js';
 
+/**
+ * Escape HTML to prevent rendering raw markup in the summary view.
+ * @param {string} value
+ * @returns {string}
+ */
 function escapeHtml(value) {
   return value
     .replace(/&/g, '&amp;')
@@ -34,6 +39,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderer.html = (text) => escapeHtml(text);
   }
 
+  /**
+   * Render markdown or plain text summary.
+   * @param {string} text
+   */
   function renderSummary(text) {
     if (window.marked) {
       container.innerHTML = marked.parse(text, {
@@ -170,6 +179,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // Show notification function
+  /**
+   * Show a transient notification.
+   * @param {string} message
+   * @param {"success"|"error"} type
+   */
   function showNotification(message, type) {
     notification.textContent = message;
     notification.className = `notification ${type} show`;
@@ -179,6 +193,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }, 3000);
   }
 
+  /**
+   * Render article metadata.
+   * @param {{ title?: string, sourceUrl?: string }} meta
+   */
   function renderMeta(meta) {
     if (!articleMeta) return;
     const hasTitle = Boolean(meta?.title);

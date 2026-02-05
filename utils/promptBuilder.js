@@ -1,3 +1,9 @@
+/**
+ * Clamp content length based on provider limits to reduce token usage.
+ * @param {string} content
+ * @param {{ provider?: string }} settings
+ * @returns {string}
+ */
 export function clampContentForProvider(content, settings) {
   if (!content) return "";
 
@@ -13,7 +19,13 @@ export function clampContentForProvider(content, settings) {
   return content.length > maxChars ? content.slice(0, maxChars) : content;
 }
 
-export function buildSummarizationPrompt(content, language="english") {
+/**
+ * Build the summarization prompt for the LLM.
+ * @param {string} content
+ * @param {string} language
+ * @returns {string}
+ */
+export function buildSummarizationPrompt(content, language = "english") {
   return `
 You are a professional summarizer.  
 Read the webpage content provided below and produce a clear, concise summary in ${language}.

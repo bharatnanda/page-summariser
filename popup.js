@@ -79,6 +79,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 });
 
+/**
+ * Open the results page with a stored summary.
+ * @param {string} summaryText
+ * @param {{ title?: string, sourceUrl?: string }} meta
+ */
 async function showSummary(summaryText, meta = {}) {
   try {
     const id = await saveSummaryForView(summaryText, meta);
@@ -89,7 +94,11 @@ async function showSummary(summaryText, meta = {}) {
   }
 }
 
-// Show notification function
+/**
+ * Show a transient notification message.
+ * @param {string} message
+ * @param {"success"|"error"} type
+ */
 function showNotification(message, type) {
   const notification = document.getElementById("notification");
   if (!notification) return;
@@ -102,6 +111,10 @@ function showNotification(message, type) {
   }, 3000);
 }
 
+/**
+ * Increment the "pages summarized" counter.
+ * @returns {Promise<number>}
+ */
 async function incrementCounter() {
   return new Promise((resolve, reject) => {
     chrome.storage.sync.get(['pageCount'], (result) => {
@@ -117,6 +130,10 @@ async function incrementCounter() {
   });
 }
 
+/**
+ * Refresh the counter display from sync storage.
+ * @returns {Promise<void>}
+ */
 async function updateCounterDisplay() {
   const result = await new Promise(resolve => chrome.storage.sync.get(['pageCount'], resolve));
   const count = result.pageCount || 0;

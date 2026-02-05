@@ -1,6 +1,12 @@
 import { extractTextFromResponse } from '../responseParser.js';
 import { readSseStream } from '../streaming.js';
 
+/**
+ * Call Azure OpenAI chat completions (non-streaming).
+ * @param {string} prompt
+ * @param {{ apiKey: string, baseUrl: string, deployment: string, apiVersion: string, model?: string }} settings
+ * @returns {Promise<string>}
+ */
 export async function callAzure(prompt, settings) {
   const { apiKey, baseUrl, deployment, apiVersion, model } = settings;
 
@@ -58,6 +64,13 @@ export async function callAzure(prompt, settings) {
   return extractTextFromResponse(data, "azure");
 }
 
+/**
+ * Call Azure OpenAI chat completions with SSE streaming.
+ * @param {string} prompt
+ * @param {{ apiKey: string, baseUrl: string, deployment: string, apiVersion: string, model?: string }} settings
+ * @param {(delta: string, fullText: string) => void} onDelta
+ * @returns {Promise<string>}
+ */
 export async function callAzureStream(prompt, settings, onDelta) {
   const { apiKey, baseUrl, deployment, apiVersion, model } = settings;
 
