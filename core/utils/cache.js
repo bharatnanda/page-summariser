@@ -1,3 +1,5 @@
+import { platform } from '../platform.js';
+
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 /**
@@ -7,7 +9,7 @@ const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
  */
 export async function getCachedSummary(url) {
   try {
-    const result = await chrome.storage.local.get(['summaryCache']);
+    const result = await platform.storage.get('local', ['summaryCache']);
     const cache = result.summaryCache || {};
     
     const cachedItem = cache[url];
@@ -17,7 +19,7 @@ export async function getCachedSummary(url) {
     if (now - cachedItem.timestamp > CACHE_DURATION) {
       // Expired, remove from cache
       delete cache[url];
-      await chrome.storage.local.set({ summaryCache: cache });
+      await platform.storage.set('local', { summaryCache: cache });
       return null;
     }
     
@@ -37,7 +39,7 @@ export async function getCachedSummary(url) {
  */
 export async function cacheSummary(url, summary, meta = {}) {
   try {
-    const result = await chrome.storage.local.get(['summaryCache']);
+    const result = await platform.storage.get('local', ['summaryCache']);
     const cache = result.summaryCache || {};
     
     cache[url] = {
@@ -57,7 +59,7 @@ export async function cacheSummary(url, summary, meta = {}) {
       }
     }
     
-    await chrome.storage.local.set({ summaryCache: cache });
+    await platform.storage.set('local', { summaryCache: cache });
   } catch (error) {
     console.error("Error caching summary:", error);
   }
@@ -69,7 +71,7 @@ export async function cacheSummary(url, summary, meta = {}) {
  */
 export async function clearExpiredCache() {
   try {
-    const result = await chrome.storage.local.get(['summaryCache']);
+    const result = await platform.storage.get('local', ['summaryCache']);
     const cache = result.summaryCache || {};
     
     const now = Date.now();
@@ -83,7 +85,7 @@ export async function clearExpiredCache() {
     }
     
     if (modified) {
-      await chrome.storage.local.set({ summaryCache: cache });
+      await platform.storage.set('local', { summaryCache: cache });
     }
   } catch (error) {
     console.error("Error clearing expired cache:", error);

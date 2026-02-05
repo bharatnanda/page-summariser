@@ -1,4 +1,5 @@
 import { createContentPreview } from './preview.js';
+import { platform } from '../platform.js';
 
 const MAX_HISTORY_SUMMARY_CHARS = 8000;
 const MAX_HISTORY_ITEMS = 50;
@@ -54,27 +55,11 @@ export function isDuplicateHistoryItem(history, item) {
 }
 
 function storageGet(keys) {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get(keys, (result) => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-        return;
-      }
-      resolve(result);
-    });
-  });
+  return platform.storage.get('local', keys);
 }
 
 function storageSet(value) {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.set(value, () => {
-      if (chrome.runtime.lastError) {
-        reject(chrome.runtime.lastError);
-        return;
-      }
-      resolve();
-    });
-  });
+  return platform.storage.set('local', value);
 }
 
 /**

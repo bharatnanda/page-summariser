@@ -1,15 +1,31 @@
+import { platform } from '../platform.js';
+
 const MAX_CHARS = 60000;
 
 /**
- * Extract visible text and title from the current page.
+ * Extract selected text or page body text and title from the current page.
  * Prioritizes user selection when available.
  * @returns {{ text: string, title: string }}
  */
 export function extractPageData() {
+  function getReadableText() {
+    const debug = Boolean(window.__PAGE_SUMMARIZER_DEBUG);
+    const text =
+      document.body?.innerText?.trim() ||
+      document.documentElement?.innerText?.trim() ||
+      document.body?.textContent?.trim() ||
+      document.documentElement?.textContent?.trim() ||
+      "";
+    if (debug) {
+      console.log('[Page Summarizer] using page body text, length:', text.length);
+    }
+    return text;
+  }
+
   const selection = window.getSelection()?.toString() || "";
   const text = selection.trim().length > 0
     ? selection.trim()
-    : document.body?.innerText?.trim() || "";
+    : getReadableText();
 
   const ogTitle = document.querySelector('meta[property="og:title"]')?.content || "";
   const title = (ogTitle || document.title || "").trim();
@@ -33,13 +49,13 @@ export function buildContentFromText(pageText) {
 }
 
 async function getActiveTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const [tab] = await platform.tabs.query({ active: true, currentWindow: true });
   if (!tab) throw new Error("No active tab found. Please try again.");
   return tab;
 }
 
 async function executeContentScript(tabId) {
-  const [{ result }] = await chrome.scripting.executeScript({
+  const [{ result }] = await platform.scripting.executeScript({
     target: { tabId },
     func: extractPageData,
   });

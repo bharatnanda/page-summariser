@@ -1,5 +1,5 @@
 import { loadSummaryForView } from './utils/summaryStore.js';
-import { addHistoryItem, createHistoryItem } from './utils/historyStore.js';
+import { platform } from './platform.js';
 
 /**
  * Escape HTML to prevent rendering raw markup in the summary view.
@@ -19,12 +19,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("summary");
   const copyBtn = document.getElementById("copyBtn");
   const downloadBtn = document.getElementById("downloadBtn");
-  const saveBtn = document.getElementById("saveBtn");
   const historyBtn = document.getElementById("historyBtn");
   const notification = document.getElementById("notification");
   const articleMeta = document.getElementById("articleMeta");
   const articleTitle = document.getElementById("articleTitle");
   const articleSource = document.getElementById("articleSource");
+  const summaryMetrics = document.getElementById("summaryMetrics");
 
   // Get summary text from URL query params
   const params = new URLSearchParams(window.location.search);
@@ -54,6 +54,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       container.textContent = text;
     }
+    updateWordCount(text);
   }
 
   try {
@@ -86,7 +87,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   if (streamId) {
-    const port = chrome.runtime.connect({ name: `summaryStream:${streamId}` });
+    const port = platform.runtime.connect({ name: `summaryStream:${streamId}` });
     port.onMessage.addListener((message) => {
       if (!message) return;
       if (message.type === "delta") {
@@ -106,7 +107,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderMeta(summaryMeta);
         if (message.summaryId) {
           const encoded = encodeURIComponent(message.summaryId);
-          const url = chrome.runtime.getURL(`results.html?id=${encoded}`);
+          const url = platform.runtime.getURL(`results.html?id=${encoded}`);
           window.history.replaceState(null, "", url);
         }
         return;
@@ -143,39 +144,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     showNotification("Summary downloaded!", "success");
   });
 
-  // Save summary to history
-  saveBtn?.addEventListener("click", async () => {
-    try {
-      let sourceUrl = summaryMeta.sourceUrl || null;
-      const title = summaryMeta.title || "";
-
-      // Use source URL from meta, or fall back to current tab URL
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      const url = sourceUrl || tab?.url || "Unknown URL";
-      
-      // Create a history item
-      const historyItem = createHistoryItem(url, decodedText, title);
-
-      // Save to history
-      const result = await addHistoryItem(historyItem);
-      if (result.status === 'duplicate') {
-        showNotification("Summary already in history.", "success");
-        return;
-      }
-      if (result.status === 'saved_trimmed') {
-        showNotification("History saved (trimmed to fit storage).", "success");
-        return;
-      }
-      showNotification("Summary saved to history!", "success");
-    } catch (error) {
-      console.error("Error saving to history:", error);
-      showNotification("Failed to save summary", "error");
-    }
-  });
-
   // History button functionality
   historyBtn?.addEventListener("click", () => {
-    chrome.tabs.create({ url: chrome.runtime.getURL('history.html') });
+    platform.tabs.create({ url: platform.runtime.getURL('history.html') });
   });
 
   // Show notification function
@@ -218,6 +189,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
     articleMeta.hidden = false;
+  }
+
+  function updateWordCount(text) {
+    if (!summaryMetrics) return;
+    const words = (text || "").trim().match(/\S+/g);
+    const count = words ? words.length : 0;
+    summaryMetrics.textContent = `Word count: ${count}`;
   }
   
 });

@@ -1,11 +1,8 @@
 import { buildContentFromText, extractPageData } from './utils/contentExtractor.js';
 import { getSettings } from './utils/settings.js';
-import { buildSummarizationPrompt, clampContentForProvider } from './utils/promptBuilder.js';
-import { fetchSummary, fetchSummaryStream } from './utils/apiClient.js';
-import { combineBlacklists, isDomainBlacklisted } from './utils/domainBlacklist.js';
-import { saveSummaryForView } from './utils/summaryStore.js';
-import { addHistoryItem, createHistoryItem } from './utils/historyStore.js';
-import { cacheSummary, clearExpiredCache } from './utils/cache.js';
+import { clearExpiredCache } from './utils/cache.js';
+import { platform } from './platform.js';
+import { summarySession } from './utils/summarySession.js';
 
 const activeStreams = new Map();
 
@@ -76,7 +73,7 @@ function waitForStreamReady(streamId, timeoutMs = 2000) {
   ]);
 }
 
-chrome.runtime.onConnect.addListener((port) => {
+platform.runtime.onConnect.addListener((port) => {
   if (!port.name.startsWith("summaryStream:")) return;
   const streamId = port.name.slice("summaryStream:".length);
   const stream = activeStreams.get(streamId);
@@ -104,8 +101,8 @@ chrome.runtime.onConnect.addListener((port) => {
 });
 
 // Create context menu item when extension is installed
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
+platform.runtime.onInstalled.addListener(() => {
+  platform.contextMenus.create({
     id: "summarizePage",
     title: "Summarize this page",
     contexts: ["page"]
@@ -116,9 +113,9 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 // When menu item is clicked, extract text from the active tab
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+platform.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "summarizePage") {
-    chrome.scripting.executeScript({
+    platform.scripting.executeScript({
       target: { tabId: tab.id },
       func: extractPageData
     }).then(async (results) => {
@@ -140,7 +137,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       });
     }).catch(err => {
       console.error("Failed to summarize page:", err);
-      chrome.notifications.create({
+      platform.notifications.create({
         type: 'basic',
         iconUrl: 'icon.png',
         title: 'Summarization Error',
@@ -150,7 +147,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+platform.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.action !== "streamSummary") return;
   startSummaryStream({
     content: message.content,
@@ -165,96 +162,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Periodically clear expired cache entries (every 6 hours)
-chrome.alarms.create("clearExpiredCache", {
+platform.alarms.create("clearExpiredCache", {
   periodInMinutes: 360
 });
 
-chrome.alarms.onAlarm.addListener((alarm) => {
+platform.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === "clearExpiredCache") {
     clearExpiredCache();
   }
 });
-
-/**
- * Summarize a page and optionally stream deltas to the UI.
- * @param {string} content
- * @param {string} pageURL
- * @param {{ onDelta?: (delta: string) => void, title?: string }} options
- * @returns {Promise<string>}
- */
-async function summarizePage(content, pageURL, options = {}) {
-  try {
-    const { onDelta } = options;
-    const settings = await getSettings();
-
-    const combinedBlacklist = combineBlacklists(
-      settings.defaultBlacklistedUrls,
-      settings.blacklistedUrls
-    );
-
-    if (isDomainBlacklisted(combinedBlacklist, pageURL)) {
-      throw new Error("This is a restricted domain. Summarization is not allowed on this site.");
-    }
-
-    if (!content) {
-      throw new Error("No content found on this page. Please try another page.");
-    }
-
-    if (!settings.apiKey && settings.provider !== "ollama") {
-      throw new Error("API key is missing. Please set your API key in the extension settings.");
-    }
-
-    const adjustedContent = clampContentForProvider(content, settings);
-    const prompt = buildSummarizationPrompt(adjustedContent, settings.language);
-    const summary = onDelta
-      ? await fetchSummaryStream(prompt, settings, onDelta)
-      : await fetchSummary(prompt, settings);
-
-    if (!summary || summary.trim().length === 0) {
-      throw new Error("The AI model failed to generate a summary. Please try again later.");
-    }
-
-    // Save to history
-    await saveToHistory(pageURL, summary, options.title || "");
-    
-    return summary;
-  } catch (err) {
-    console.error("Summarize error:", err);
-    throw err;
-  }
-}
-
-/**
- * Save summary to history store.
- * @param {string} url
- * @param {string} summary
- * @param {string} title
- * @returns {Promise<void>}
- */
-async function saveToHistory(url, summary, title) {
-  return new Promise((resolve, reject) => {
-    const historyItem = createHistoryItem(url, summary, title);
-    addHistoryItem(historyItem)
-      .then(() => resolve())
-      .catch(reject);
-  });
-}
-
-/**
- * Increment summarized page count in sync storage.
- * @returns {Promise<void>}
- */
-async function incrementPageCount() {
-  const result = await new Promise(resolve => chrome.storage.sync.get(['pageCount'], resolve));
-  const currentCount = result.pageCount || 0;
-  const newCount = currentCount + 1;
-  await new Promise((resolve, reject) => {
-    chrome.storage.sync.set({ pageCount: newCount }, () => {
-      if (chrome.runtime.lastError) return reject(chrome.runtime.lastError);
-      resolve();
-    });
-  });
-}
 
 /**
  * Start a summary stream and open the results page.
@@ -262,45 +178,69 @@ async function incrementPageCount() {
  * @returns {Promise<string>}
  */
 async function startSummaryStream({ content, pageURL, title, incrementCounter, cacheKey }) {
+  const settings = await getSettings();
+  const disableStreaming = Boolean(settings.disableStreamingOnSafari);
+  const resolvedCacheKey = cacheKey
+    ? summarySession.buildCacheKey(cacheKey, settings)
+    : null;
+
+  const cached = await summarySession.checkCache({ cacheKey: resolvedCacheKey, incrementCounter });
+  if (cached.handled) {
+    return null;
+  }
+
+  if (disableStreaming) {
+    try {
+      await summarySession.runNonStreaming({
+        content,
+        pageURL,
+        title,
+        incrementCounter,
+        cacheKey: resolvedCacheKey
+      });
+    } catch (err) {
+      console.error("Summarize error:", err);
+      platform.notifications.create({
+        type: 'basic',
+        iconUrl: 'icon.png',
+        title: 'Summarization Error',
+        message: err.message || 'Failed to summarize this page. Please try again.'
+      });
+    }
+    return null;
+  }
+
   const streamId = createStreamId();
   registerStream(streamId);
 
-  chrome.tabs.create({
-    url: chrome.runtime.getURL(`results.html?streamId=${encodeURIComponent(streamId)}`)
-  });
-
   try {
     await waitForStreamReady(streamId);
-    const summary = await summarizePage(content, pageURL, {
+    const result = await summarySession.runStreaming({
+      content,
+      pageURL,
       title,
+      incrementCounter,
+      cacheKey: resolvedCacheKey,
+      streamId,
       onDelta: (delta) => {
         sendStreamMessage(streamId, { type: "delta", delta });
       }
     });
 
-    if (cacheKey) {
-      await cacheSummary(cacheKey, summary, { title, sourceUrl: pageURL });
-    }
-
-    if (incrementCounter) {
-      await incrementPageCount();
-    }
-
-    let summaryId = null;
-    try {
-      summaryId = await saveSummaryForView(summary, { title, sourceUrl: pageURL });
-    } catch (error) {
-      // Ignore summary store errors; the stream already delivered the content.
-    }
-
-    sendStreamMessage(streamId, { type: "done", summary, summaryId, title, sourceUrl: pageURL });
+    sendStreamMessage(streamId, {
+      type: "done",
+      summary: result.summary,
+      summaryId: result.summaryId,
+      title,
+      sourceUrl: pageURL
+    });
   } catch (err) {
     console.error("Summarize error:", err);
     sendStreamMessage(streamId, {
       type: "error",
       message: err.message || "Failed to summarize this page."
     });
-    chrome.notifications.create({
+    platform.notifications.create({
       type: 'basic',
       iconUrl: 'icon.png',
       title: 'Summarization Error',

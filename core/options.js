@@ -1,3 +1,5 @@
+import { platform } from './platform.js';
+
 // Get references to key DOM elements
 const providerSelect = document.getElementById('provider');
 const allProviderFields = document.querySelectorAll('.provider-specific');
@@ -66,7 +68,7 @@ function resetForm() {
  */
 function loadSettings() {
   const fields = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "blacklistedUrls", "defaultBlacklistedUrls"];
-  chrome.storage.sync.get(fields, (items) => {
+  platform.storage.get('sync', fields).then((items) => {
     if (items.provider) document.getElementById("provider").value = items.provider;
     const providerKey = (items.provider || "openai").toLowerCase();
     const providerSettings = items.providerSettings || {};
@@ -102,7 +104,7 @@ function saveSettings() {
 
   providerSettingsCache[providerKey] = providerSpecific;
 
-  chrome.storage.sync.set({ ...globalSettings, providerSettings: providerSettingsCache }, () => {
+  platform.storage.set('sync', { ...globalSettings, providerSettings: providerSettingsCache }).then(() => {
     statusMessage.textContent = "Settings saved! ✅";
     setTimeout(() => { statusMessage.textContent = ""; }, 2000);
   });
@@ -117,7 +119,7 @@ providerSelect.addEventListener('change', () => {
   providerSettingsCache[currentProvider] = currentSettings;
   const nextSettings = providerSettingsCache[nextProvider] || {};
   applyProviderSettingsToForm(nextSettings);
-  chrome.storage.sync.set({ providerSettings: providerSettingsCache }, () => {
+  platform.storage.set('sync', { providerSettings: providerSettingsCache }).then(() => {
     providerSelect.dataset.currentProvider = providerSelect.value;
     updateProviderFields();
   });

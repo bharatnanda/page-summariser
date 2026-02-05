@@ -1,6 +1,6 @@
-# Page Summarizer Chrome Extension
+# Page Summarizer Browser Extension
 
-A powerful Chrome extension that allows users to summarize web pages using various AI providers including OpenAI, Google Gemini, Azure OpenAI, and Ollama.
+A cross‑browser extension that summarizes web pages using OpenAI, Google Gemini, Azure OpenAI, or Ollama.
 
 ## Table of Contents
 - [Features](#features)
@@ -26,10 +26,11 @@ A powerful Chrome extension that allows users to summarize web pages using vario
 ## Installation
 
 1. Download or clone this repository
-2. Open Chrome and navigate to `chrome://extensions`, for Edge navigate to `edge://extensions`
-3. Look for "Developer mode" toggle on the screen and enable it
-4. Click "Load unpacked" and select the extension directory
-5. Pin the extension to your toolbar for easy access
+2. Build the extension for your target browser (see Development → Build)
+3. Load the built extension:
+   - **Chrome/Edge**: open `chrome://extensions` or `edge://extensions`, enable Developer mode, click “Load unpacked”, choose `dist/chrome/`
+   - **Firefox**: open `about:debugging#/runtime/this-firefox`, click “Load Temporary Add‑on…”, choose any file inside `dist/firefox/`
+   - **Safari**: convert `dist/safari/` using `safari-web-extension-converter` and build/run in Xcode (steps below)
 
 ## Supported AI Providers
 
@@ -58,19 +59,19 @@ A powerful Chrome extension that allows users to summarize web pages using vario
 
 ### Summarizing a Page
 1. Navigate to any web page you want to summarize
-2. Click the Page Summarizer icon in your Chrome toolbar
+2. Click the Page Summarizer icon in your browser toolbar
 3. Click "Summarize This Page"
 4. View the generated summary in a new tab
 
 
 ### Viewing History
-1. Click the Page Summarizer icon in your Chrome toolbar
+1. Click the Page Summarizer icon in your browser toolbar
 2. Click "View History" to see your previous summaries
 3. Click any row to view the full summary
 4. Use the delete button to remove individual summaries
 
 ### Managing Settings
-1. Click the Page Summarizer icon in your Chrome toolbar
+1. Click the Page Summarizer icon in your browser toolbar
 2. Click "Settings" to configure the extension
 3. Select your preferred AI provider and configure settings
 
@@ -129,7 +130,7 @@ These domains are blacklisted by default to protect sensitive information. Users
 
 ### Storage
 - Summaries are stored locally in your browser's storage
-- Settings are synchronized across your Chrome devices
+- Settings are synchronized across your browser profile (when sync storage is available)
 - No data is shared with third parties
 
 ### API Keys
@@ -152,6 +153,61 @@ For complete information about how we handle your data, please read our [Privacy
 7. Summary is saved to history and cache
 
 ## Development
+
+### Prerequisites
+- Node.js (for build scripts)
+
+### Multi-Platform Builds
+
+The extension code lives in `core/` and is built per platform using `platforms/<platform>/manifest.json`.
+
+Build outputs go to `dist/<platform>/`.
+
+#### Build for Chrome
+
+```
+npm run build:chrome
+```
+
+Load `dist/chrome/` as an unpacked extension in Chrome/Edge.
+
+#### Build for Firefox
+
+```
+npm run build:firefox
+```
+
+Load `dist/firefox/` as a temporary add-on in `about:debugging`, or zip the folder for AMO submission.
+
+#### Build for Safari
+
+```
+npm run build:safari
+```
+
+Then convert the WebExtension bundle to a Safari App:
+
+```
+safari-web-extension-converter dist/safari --project-location safari-app
+```
+
+Open the generated Xcode project in `safari-app/`, enable the extension, and build/run.
+
+#### Clean build artifacts
+
+```
+npm run clean
+```
+
+#### Platform Overrides
+
+If you need platform-specific changes, place files in:
+
+```
+platforms/<platform>/overrides/
+```
+
+Those files override `core/` during the build.
 
 ### Adding New Providers
 

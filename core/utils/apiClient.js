@@ -3,10 +3,19 @@ import { callAzure, callAzureStream } from './api/azureClient.js';
 import { callGemini, callGeminiStream } from './api/geminiClient.js';
 import { callOllama, callOllamaStream } from './api/ollamaClient.js';
 
+function isSafariRuntime() {
+  const ua = globalThis?.navigator?.userAgent || "";
+  return /Safari/i.test(ua) && !/Chrome|Chromium|Edg|OPR/i.test(ua);
+}
+
+function shouldDisableStreaming(settings) {
+  return isSafariRuntime() && settings?.disableStreamingOnSafari;
+}
+
 /**
  * Fetch a full summary response (non-streaming).
  * @param {string} prompt
- * @param {{ provider: string }} settings
+ * @param {import('./settings.js').Settings} settings
  * @returns {Promise<string>}
  */
 export async function fetchSummary(prompt, settings) {
@@ -33,12 +42,19 @@ export async function fetchSummary(prompt, settings) {
 /**
  * Stream a summary response when supported by the provider.
  * @param {string} prompt
- * @param {{ provider: string }} settings
+ * @param {import('./settings.js').Settings} settings
  * @param {(delta: string, fullText: string) => void} onDelta
  * @returns {Promise<string>}
  */
 export async function fetchSummaryStream(prompt, settings, onDelta) {
   try {
+    if (shouldDisableStreaming(settings)) {
+      const summary = await fetchSummary(prompt, settings);
+      if (onDelta && summary) {
+        onDelta(summary, summary);
+      }
+      return summary;
+    }
     switch (settings.provider) {
       case "openai":
         return await callOpenAIStream(prompt, settings, onDelta);
