@@ -6,6 +6,11 @@ const resetButton = document.getElementById('resetBtn');
 const statusMessage = document.getElementById('status');
 const providerSettingsCache = {};
 
+function isSafari() {
+  const ua = navigator.userAgent || "";
+  return /Safari/i.test(ua) && !/Chrome|Chromium|Edg|OPR/i.test(ua);
+}
+
 /**
  * Updates the visibility of provider-specific input fields based on the selected provider.
  */
@@ -56,6 +61,7 @@ function resetForm() {
   applyProviderSettingsToForm({});
   document.getElementById("language").value = "english";
   document.getElementById("blacklistedUrls").value = "";
+  document.getElementById("disableStreamingOnSafari").checked = isSafari();
 
   statusMessage.textContent = "";
   updateProviderFields();
@@ -65,7 +71,7 @@ function resetForm() {
  * Loads saved settings from chrome.storage.sync and populates the form fields.
  */
 function loadSettings() {
-  const fields = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "blacklistedUrls", "defaultBlacklistedUrls"];
+  const fields = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "blacklistedUrls", "defaultBlacklistedUrls", "disableStreamingOnSafari"];
   chrome.storage.sync.get(fields, (items) => {
     if (items.provider) document.getElementById("provider").value = items.provider;
     const providerKey = (items.provider || "openai").toLowerCase();
@@ -82,6 +88,11 @@ function loadSettings() {
     if (items.language) document.getElementById("language").value = items.language;
     if (items.blacklistedUrls !== undefined) document.getElementById("blacklistedUrls").value = items.blacklistedUrls;
     if (items.defaultBlacklistedUrls !== undefined) document.getElementById("defaultBlacklistedUrls").value = items.defaultBlacklistedUrls;
+    const safariDefault = isSafari();
+    const disableStreaming = items.disableStreamingOnSafari !== undefined
+      ? items.disableStreamingOnSafari
+      : safariDefault;
+    document.getElementById("disableStreamingOnSafari").checked = Boolean(disableStreaming);
     updateProviderFields();
     providerSelect.dataset.currentProvider = providerSelect.value;
   });
@@ -97,7 +108,8 @@ function saveSettings() {
     provider: providerSelect.value,
     language: document.getElementById("language").value.trim(),
     blacklistedUrls: document.getElementById("blacklistedUrls").value.trim(),
-    defaultBlacklistedUrls: document.getElementById("defaultBlacklistedUrls").value.trim()
+    defaultBlacklistedUrls: document.getElementById("defaultBlacklistedUrls").value.trim(),
+    disableStreamingOnSafari: document.getElementById("disableStreamingOnSafari").checked
   };
 
   providerSettingsCache[providerKey] = providerSpecific;

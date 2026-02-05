@@ -153,6 +153,52 @@ For complete information about how we handle your data, please read our [Privacy
 
 ## Development
 
+### Multi-Platform Builds
+
+The extension code lives in `core/` and is built per platform using the manifest in `platforms/<platform>/manifest.json`.
+
+Build outputs go to `dist/<platform>/`.
+
+#### Build for Chrome
+
+```
+node build/build.js chrome
+```
+
+Load `dist/chrome/` as an unpacked extension in Chrome/Edge.
+
+#### Build for Firefox
+
+```
+node build/build.js firefox
+```
+
+Load `dist/firefox/` as a temporary add-on in `about:debugging`, or zip the folder for AMO submission.
+
+#### Build for Safari
+
+```
+node build/build.js safari
+```
+
+Then convert the WebExtension bundle to a Safari App:
+
+```
+safari-web-extension-converter dist/safari --project-location safari-app
+```
+
+Open the generated Xcode project in `safari-app/`, enable the extension, and build/run.
+
+#### Platform Overrides
+
+If you need platform-specific changes, place files in:
+
+```
+platforms/<platform>/overrides/
+```
+
+Those files override `core/` during the build.
+
 ### Adding New Providers
 
 1. Create a new client in `utils/api/` (e.g., `newProviderClient.js`)
