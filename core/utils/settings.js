@@ -14,13 +14,11 @@
  * }>}
  */
 export async function getSettings() {
-  const keys = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "blacklistedUrls", "defaultBlacklistedUrls", "disableStreamingOnSafari"];
+  const keys = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "blacklistedUrls", "defaultBlacklistedUrls"];
   const settings = await new Promise(res => chrome.storage.sync.get(keys, res));
   const ua = globalThis?.navigator?.userAgent || "";
   const isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|Edg|OPR/i.test(ua);
-  const disableStreamingOnSafari = settings.disableStreamingOnSafari !== undefined
-    ? Boolean(settings.disableStreamingOnSafari)
-    : isSafari;
+  const disableStreamingOnSafari = isSafari;
 
   const provider = (settings.provider || "openai").toLowerCase();
   const providerSettings = settings.providerSettings || {};
