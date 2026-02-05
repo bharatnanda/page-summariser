@@ -9,10 +9,18 @@ import { cacheSummary, clearExpiredCache } from './utils/cache.js';
 
 const activeStreams = new Map();
 
+/**
+ * Generate a unique stream identifier for UI streaming.
+ * @returns {string}
+ */
 function createStreamId() {
   return `stream_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+/**
+ * Register a stream and its pending buffer.
+ * @param {string} streamId
+ */
 function registerStream(streamId) {
   let readyResolve;
   const ready = new Promise((resolve) => {
@@ -21,6 +29,10 @@ function registerStream(streamId) {
   activeStreams.set(streamId, { port: null, buffer: [], ready, readyResolve });
 }
 
+/**
+ * Cleanup stream state and close any open port.
+ * @param {string} streamId
+ */
 function cleanupStream(streamId) {
   const stream = activeStreams.get(streamId);
   if (!stream) return;
@@ -34,6 +46,11 @@ function cleanupStream(streamId) {
   activeStreams.delete(streamId);
 }
 
+/**
+ * Send a message to a stream port or buffer it until ready.
+ * @param {string} streamId
+ * @param {any} message
+ */
 function sendStreamMessage(streamId, message) {
   const stream = activeStreams.get(streamId);
   if (!stream) return;
@@ -44,6 +61,12 @@ function sendStreamMessage(streamId, message) {
   }
 }
 
+/**
+ * Wait for a stream port to connect or timeout.
+ * @param {string} streamId
+ * @param {number} timeoutMs
+ * @returns {Promise<void>}
+ */
 function waitForStreamReady(streamId, timeoutMs = 2000) {
   const stream = activeStreams.get(streamId);
   if (!stream?.ready) return Promise.resolve();
@@ -152,6 +175,13 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
+/**
+ * Summarize a page and optionally stream deltas to the UI.
+ * @param {string} content
+ * @param {string} pageURL
+ * @param {{ onDelta?: (delta: string) => void, title?: string }} options
+ * @returns {Promise<string>}
+ */
 async function summarizePage(content, pageURL, options = {}) {
   try {
     const { onDelta } = options;
@@ -194,6 +224,13 @@ async function summarizePage(content, pageURL, options = {}) {
   }
 }
 
+/**
+ * Save summary to history store.
+ * @param {string} url
+ * @param {string} summary
+ * @param {string} title
+ * @returns {Promise<void>}
+ */
 async function saveToHistory(url, summary, title) {
   return new Promise((resolve, reject) => {
     const historyItem = createHistoryItem(url, summary, title);
@@ -203,6 +240,10 @@ async function saveToHistory(url, summary, title) {
   });
 }
 
+/**
+ * Increment summarized page count in sync storage.
+ * @returns {Promise<void>}
+ */
 async function incrementPageCount() {
   const result = await new Promise(resolve => chrome.storage.sync.get(['pageCount'], resolve));
   const currentCount = result.pageCount || 0;
@@ -215,6 +256,11 @@ async function incrementPageCount() {
   });
 }
 
+/**
+ * Start a summary stream and open the results page.
+ * @param {{ content: string, pageURL: string, title: string, incrementCounter: boolean, cacheKey: string | null }} args
+ * @returns {Promise<string>}
+ */
 async function startSummaryStream({ content, pageURL, title, incrementCounter, cacheKey }) {
   const streamId = createStreamId();
   registerStream(streamId);

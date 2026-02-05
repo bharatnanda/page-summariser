@@ -34,6 +34,12 @@ function pruneStore(store) {
   return modified;
 }
 
+/**
+ * Save a summary for short-term viewing and return its ID.
+ * @param {string} summary
+ * @param {{ title?: string, sourceUrl?: string }} meta
+ * @returns {Promise<string>}
+ */
 export async function saveSummaryForView(summary, meta = {}) {
   const storage = getStorageArea();
   const result = await storage.get([STORAGE_KEY]);
@@ -52,6 +58,11 @@ export async function saveSummaryForView(summary, meta = {}) {
   return id;
 }
 
+/**
+ * Load a saved summary by ID.
+ * @param {string} id
+ * @returns {Promise<{ summary: string, title: string, sourceUrl: string, timestamp: number } | null>}
+ */
 export async function loadSummaryForView(id) {
   if (!id) return null;
   const storage = getStorageArea();

@@ -1,3 +1,17 @@
+/**
+ * Load and normalize persisted settings.
+ * @returns {Promise<{
+ *   provider: string,
+ *   apiKey: string,
+ *   baseUrl: string,
+ *   deployment: string,
+ *   apiVersion: string,
+ *   model: string,
+ *   language: string,
+ *   blacklistedUrls: string,
+ *   defaultBlacklistedUrls: string
+ * }>}
+ */
 export async function getSettings() {
   const keys = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "blacklistedUrls", "defaultBlacklistedUrls"];
   const settings = await new Promise(res => chrome.storage.sync.get(keys, res));

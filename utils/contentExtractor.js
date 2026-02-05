@@ -1,5 +1,10 @@
 const MAX_CHARS = 60000;
 
+/**
+ * Extract visible text and title from the current page.
+ * Prioritizes user selection when available.
+ * @returns {{ text: string, title: string }}
+ */
 export function extractPageData() {
   const selection = window.getSelection()?.toString() || "";
   const text = selection.trim().length > 0
@@ -12,6 +17,11 @@ export function extractPageData() {
   return { text, title };
 }
 
+/**
+ * Normalize and clamp raw page text to a safe maximum length.
+ * @param {string} pageText
+ * @returns {string}
+ */
 export function buildContentFromText(pageText) {
   const text = (pageText || "").trim();
   if (!text) return "";
@@ -36,6 +46,10 @@ async function executeContentScript(tabId) {
   return result;
 }
 
+/**
+ * Fetch page content from the active tab using a content script.
+ * @returns {Promise<{ content: string, title: string, sourceUrl: string }>}
+ */
 export async function getPageContent() {
   try {
     const tab = await getActiveTab();
@@ -52,6 +66,10 @@ export async function getPageContent() {
   }
 }
 
+/**
+ * Get the active tab URL.
+ * @returns {Promise<string>}
+ */
 export async function getPageUrl() {
   try {
     const tab = await getActiveTab();

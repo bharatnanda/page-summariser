@@ -1,3 +1,9 @@
+/**
+ * Extract plain text from provider-specific response payloads.
+ * @param {any} data
+ * @param {"openai"|"azure"|"gemini"|"ollama"} provider
+ * @returns {string|null}
+ */
 export function extractTextFromResponse(data, provider) {
   if (!data) return null;
 

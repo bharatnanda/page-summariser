@@ -1,6 +1,13 @@
 import { extractTextFromResponse } from '../responseParser.js';
 import { readSseStream } from '../streaming.js';
 
+/**
+ * Resolve a base URL to the Gemini REST endpoint.
+ * @param {string} baseUrl
+ * @param {string} model
+ * @param {boolean} stream
+ * @returns {string}
+ */
 function resolveGeminiUrl(baseUrl, model, stream) {
   const endpoint = stream ? "streamGenerateContent" : "generateContent";
   if (!baseUrl) {
@@ -31,6 +38,12 @@ function resolveGeminiUrl(baseUrl, model, stream) {
   }
 }
 
+/**
+ * Call Gemini generateContent (non-streaming).
+ * @param {string} prompt
+ * @param {{ apiKey: string, baseUrl?: string, model?: string }} settings
+ * @returns {Promise<string>}
+ */
 export async function callGemini(prompt, settings) {
   const { apiKey, baseUrl, model } = settings;
   const geminiModel = model || "gemini-2.5-flash";
@@ -72,6 +85,13 @@ export async function callGemini(prompt, settings) {
   return extractTextFromResponse(data, "gemini");
 }
 
+/**
+ * Call Gemini streamGenerateContent with SSE streaming.
+ * @param {string} prompt
+ * @param {{ apiKey: string, baseUrl?: string, model?: string }} settings
+ * @param {(delta: string, fullText: string) => void} onDelta
+ * @returns {Promise<string>}
+ */
 export async function callGeminiStream(prompt, settings, onDelta) {
   const { apiKey, baseUrl, model } = settings;
   const geminiModel = model || "gemini-2.5-flash";

@@ -1,9 +1,9 @@
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 /**
- * Get cached summary for a URL if it exists and is not expired
+ * Get cached summary for a URL if it exists and is not expired.
  * @param {string} url - The page URL
- * @returns {Promise<object|null>} - The cached summary payload or null if not found/expired
+ * @returns {Promise<{ summary: string, title: string, sourceUrl: string, timestamp: number } | null>}
  */
 export async function getCachedSummary(url) {
   try {
@@ -29,10 +29,10 @@ export async function getCachedSummary(url) {
 }
 
 /**
- * Save a summary to cache
+ * Save a summary to cache.
  * @param {string} url - The page URL
  * @param {string} summary - The summary text
- * @param {object} meta - Optional metadata
+ * @param {{ title?: string, sourceUrl?: string }} meta - Optional metadata
  * @returns {Promise<void>}
  */
 export async function cacheSummary(url, summary, meta = {}) {
@@ -64,7 +64,7 @@ export async function cacheSummary(url, summary, meta = {}) {
 }
 
 /**
- * Clear expired cache entries
+ * Clear expired cache entries.
  * @returns {Promise<void>}
  */
 export async function clearExpiredCache() {

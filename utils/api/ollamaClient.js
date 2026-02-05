@@ -2,10 +2,10 @@ import { extractTextFromResponse } from '../responseParser.js';
 import { readNdjsonStream } from '../streaming.js';
 
 /**
- * Calls Ollama's /api/chat endpoint for summarization.
- * @param {string} prompt - The text prompt to summarize.
- * @param {object} settings - User's model settings.
- * @returns {Promise<string>} - Summary response.
+ * Call Ollama's /api/chat endpoint for summarization.
+ * @param {string} prompt
+ * @param {{ apiKey?: string, baseUrl?: string, model?: string }} settings
+ * @returns {Promise<string>}
  */
 export async function callOllama(prompt, settings) {
   const { apiKey, baseUrl, model } = settings;
@@ -76,11 +76,11 @@ export async function callOllama(prompt, settings) {
 }
 
 /**
- * Calls Ollama's /api/chat endpoint with streaming enabled.
- * @param {string} prompt - The text prompt to summarize.
- * @param {object} settings - User's model settings.
- * @param {function} onDelta - Callback for streaming deltas.
- * @returns {Promise<string>} - Summary response.
+ * Call Ollama's /api/chat endpoint with streaming enabled.
+ * @param {string} prompt
+ * @param {{ apiKey?: string, baseUrl?: string, model?: string }} settings
+ * @param {(delta: string, fullText: string) => void} onDelta
+ * @returns {Promise<string>}
  */
 export async function callOllamaStream(prompt, settings, onDelta) {
   const { apiKey, baseUrl, model } = settings;

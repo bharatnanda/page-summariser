@@ -22,6 +22,10 @@ function updateProviderFields() {
   });
 }
 
+/**
+ * Read provider-specific settings from the form inputs.
+ * @returns {{ apiKey: string, baseUrl: string, deployment: string, apiVersion: string, model: string }}
+ */
 function getProviderSettingsFromForm() {
   return {
     apiKey: document.getElementById("apiKey").value.trim(),
@@ -32,6 +36,10 @@ function getProviderSettingsFromForm() {
   };
 }
 
+/**
+ * Apply provider-specific settings to the form inputs.
+ * @param {{ apiKey?: string, baseUrl?: string, deployment?: string, apiVersion?: string, model?: string }} settings
+ */
 function applyProviderSettingsToForm(settings) {
   document.getElementById("apiKey").value = settings.apiKey || "";
   document.getElementById("baseUrl").value = settings.baseUrl || "";

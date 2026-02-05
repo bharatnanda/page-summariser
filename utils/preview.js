@@ -1,3 +1,8 @@
+/**
+ * Build a compact, single-line preview string for history rows.
+ * @param {string} summary
+ * @returns {string}
+ */
 export function createContentPreview(summary) {
   if (!summary) return 'No preview available';
 

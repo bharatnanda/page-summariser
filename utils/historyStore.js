@@ -10,6 +10,13 @@ function trimSummaryForHistory(summary) {
   return `${summary.slice(0, MAX_HISTORY_SUMMARY_CHARS)}...`;
 }
 
+/**
+ * Create a normalized history item with preview and timestamp.
+ * @param {string} url
+ * @param {string} summary
+ * @param {string} title
+ * @returns {{ url: string, sourceUrl: string, title: string, summary: string, timestamp: string, contentPreview: string }}
+ */
 export function createHistoryItem(url, summary, title = "") {
   const trimmedSummary = trimSummaryForHistory(summary);
   return {
@@ -22,6 +29,12 @@ export function createHistoryItem(url, summary, title = "") {
   };
 }
 
+/**
+ * Check for duplicates within a time window or identical content.
+ * @param {Array<any>} history
+ * @param {any} item
+ * @returns {boolean}
+ */
 export function isDuplicateHistoryItem(history, item) {
   if (!item || !item.url) return false;
   const itemTime = Date.parse(item.timestamp || '');
@@ -64,6 +77,11 @@ function storageSet(value) {
   });
 }
 
+/**
+ * Save a history item, trimming if storage quota is exceeded.
+ * @param {ReturnType<typeof createHistoryItem>} historyItem
+ * @returns {Promise<{ status: "saved" | "duplicate" | "saved_trimmed" }>}
+ */
 export async function addHistoryItem(historyItem) {
   const result = await storageGet(['summaryHistory']);
   const history = result.summaryHistory || [];

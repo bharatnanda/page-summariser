@@ -18,6 +18,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadHistory();
 });
 
+/**
+ * Load summary history and render the table.
+ * @returns {Promise<void>}
+ */
 async function loadHistory() {
   const historyTableBody = document.getElementById("historyTableBody");
   
@@ -102,6 +106,10 @@ async function loadHistory() {
   }
 }
 
+/**
+ * Clear all saved history.
+ * @returns {Promise<void>}
+ */
 async function clearHistory() {
   try {
     await chrome.storage.local.set({ summaryHistory: [] });
@@ -112,6 +120,11 @@ async function clearHistory() {
   }
 }
 
+/**
+ * Delete a history item by index.
+ * @param {number} index
+ * @returns {Promise<void>}
+ */
 async function deleteHistoryItem(index) {
   try {
     const result = await chrome.storage.local.get(['summaryHistory']);
@@ -128,6 +141,10 @@ async function deleteHistoryItem(index) {
   }
 }
 
+/**
+ * Open a stored summary in the results view.
+ * @param {number} index
+ */
 function viewFullSummary(index) {
   chrome.storage.local.get(['summaryHistory'], (result) => {
     const history = result.summaryHistory || [];
@@ -149,6 +166,11 @@ function viewFullSummary(index) {
   });
 }
 
+/**
+ * Format a timestamp to a readable date.
+ * @param {string} timestamp
+ * @returns {string}
+ */
 function formatDate(timestamp) {
   const date = new Date(timestamp);
   return date.toLocaleDateString('en-US', {
@@ -158,6 +180,11 @@ function formatDate(timestamp) {
   });
 }
 
+/**
+ * Format a timestamp to a readable time.
+ * @param {string} timestamp
+ * @returns {string}
+ */
 function formatTime(timestamp) {
   const date = new Date(timestamp);
   return date.toLocaleTimeString('en-US', {
@@ -166,6 +193,11 @@ function formatTime(timestamp) {
   });
 }
 
+/**
+ * Extract the first URL from a summary as a fallback source.
+ * @param {string} summary
+ * @returns {string|null}
+ */
 function extractSource(summary) {
 
   // Extract first full URL (http/https) — allow query params and fragments
@@ -180,6 +212,11 @@ function extractSource(summary) {
 
 
 
+/**
+ * Show a transient notification.
+ * @param {string} message
+ * @param {"success"|"error"} type
+ */
 function showNotification(message, type) {
   const notification = document.getElementById("notification");
   if (!notification) return;
