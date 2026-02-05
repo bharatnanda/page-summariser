@@ -1,9 +1,13 @@
+import { platform } from '../platform.js';
+
 const STORAGE_KEY = 'summaryView';
 const MAX_ITEMS = 20;
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 function getStorageArea() {
-  return chrome.storage.session || chrome.storage.local;
+  return platform.storage.sessionAvailable()
+    ? platform.storage.area('session')
+    : platform.storage.area('local');
 }
 
 function generateId() {

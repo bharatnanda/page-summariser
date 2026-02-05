@@ -15,7 +15,7 @@ function shouldDisableStreaming(settings) {
 /**
  * Fetch a full summary response (non-streaming).
  * @param {string} prompt
- * @param {{ provider: string }} settings
+ * @param {import('./settings.js').Settings} settings
  * @returns {Promise<string>}
  */
 export async function fetchSummary(prompt, settings) {
@@ -42,7 +42,7 @@ export async function fetchSummary(prompt, settings) {
 /**
  * Stream a summary response when supported by the provider.
  * @param {string} prompt
- * @param {{ provider: string }} settings
+ * @param {import('./settings.js').Settings} settings
  * @param {(delta: string, fullText: string) => void} onDelta
  * @returns {Promise<string>}
  */

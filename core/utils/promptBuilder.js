@@ -1,7 +1,7 @@
 /**
  * Clamp content length based on provider limits to reduce token usage.
  * @param {string} content
- * @param {{ provider?: string }} settings
+ * @param {import('./settings.js').Settings} settings
  * @returns {string}
  */
 export function clampContentForProvider(content, settings) {
@@ -30,54 +30,51 @@ export function buildSummarizationPrompt(content, language = "english") {
 You are a professional summarizer.  
 Read the webpage content provided below and produce a clear, concise summary in ${language}.
 
-# Web Article Summarization Rules
+## Hard Constraints
+- Must keep the summary under **250 words**.
+- Use **bullet points ('-') by default**; use short paragraphs only when needed or when bulleting harms clarity (especially in dense docs).
+- Use a **table only** for comparative data or structured lists with **3+ similar items**.
+- Use **bold** to emphasize the most important names, organizations, and key conclusions (avoid over-bolding).
+- Wrap long URLs in angle brackets < > if included.
 
-## Length and Structure
+## Length Target (Adaptive)
+Choose a target length based on page type and content length, while staying under 250 words:
+- **Short pages or landing pages:** ~80-130 words.
+- **Typical articles:** ~130-200 words.
+- **Long docs or dense pages:** ~200-250 words.
 
-- Important: Must keep the summary under 200 words.
-- Ensure to use bullet points, short paragraphs, and tables as needed to improve clarity and readability.
-
-## Output Formatting
-
-- Use bullet points ('-') for list-style items.
-- Use **bold** to emphasize names, organizations, or key conclusions.
-- Use tables only for comparative data or clearly structured lists.
-- Wrap long URLs in angle brackets < >' to prevent Markdown rendering issues.
+## Page-Type Handling (Required)
+First infer the page type and summarize accordingly:
+- **Article/essay:** central thesis + key arguments + conclusion.
+- **Homepage/feed/index:** digest the most important items; **do not force one narrative**.
+- **Docs/reference:** purpose + key sections/concepts + how to use (if applicable).
+- **Product/landing:** what it is, who it’s for, key features, pricing/CTA if present.
+- **Mixed pages:** summarize the dominant content blocks.
 
 ## What to Include
+- Main ideas/topics and key arguments (when applicable).
+- Important facts, data points, outcomes, or conclusions.
+- Overall purpose/intent (inform, persuade, critique, promote, document, etc.).
+- Key entities: people, organizations, locations, events, products/tech/concepts.
+- Author stance/tone **only if clearly expressed**.
+- Calls to action/recommendations/proposed solutions (if present).
+- Trends/comparisons/historical context **if relevant and present**.
+- Implications/consequences **only if explicitly stated or clearly supported by the text** (no speculation).
 
-- Main ideas and key arguments presented in the article.
-- Important facts, data points, or conclusions.
-- The overall purpose or intent of the article (e.g., inform, persuade, critique).
-- Key entities, such as:
-  - People (e.g., authors, speakers, subjects)
-  - Organizations or institutions
-  - Locations or regions
-  - Events or incidents
-  - Notable technologies, products, or abstract concepts
-- Implications, consequences, or potential impact of the content.
-- Author’s stance, tone, or perspective (if clearly expressed).
-- Calls to action, recommendations, or proposed solutions (if applicable).
-- Trends, comparisons, or significant historical context (if relevant).
+### If the page includes code
+- Summarize what the code does and any setup/config/dependencies.
+- Include snippets only if they add clear value.
+- Note warnings/best practices if mentioned.
 
-### If the article includes code:
+## What to Exclude (Strict)
+- Navigation menus, headers/footers, ads, pop-ups, cookie banners, scripts/analytics.
+- Author bios, comments, social embeds, newsletter signups, unrelated promos.
 
-- Summarize the main purpose or functionality of the code.
-- Include relevant code snippets only if they add value.
-- Note key setup steps, configurations, or dependencies.
-- Highlight any warnings, best practices, or tips provided by the author.
+## For Long or Complex Pages
+- Extract only the most important insights; avoid exhaustive detail.
+- Prioritize the primary purpose and the most impactful points.
 
-## What to Exclude
-
-- Navigation menus, headers, footers, advertisements, or pop-ups.
-- Author bios, user comments, and unrelated promotional content.
-- Embedded social links, newsletter signups, or unrelated sidebars.
-
-## For Long or Complex Articles
-
-- Focus on extracting only the most important insights.
-- Avoid exhaustive detail; aim to convey the essential message or value of the content.
-- Prioritize the central thesis and any novel or high-impact points.
+Output only the summary.
 
 ---
 

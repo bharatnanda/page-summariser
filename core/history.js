@@ -1,5 +1,6 @@
 import { createContentPreview } from './utils/preview.js';
 import { saveSummaryForView } from './utils/summaryStore.js';
+import { platform } from './platform.js';
 
 document.addEventListener("DOMContentLoaded", async () => {
   const historyTableBody = document.getElementById("historyTableBody");
@@ -26,48 +27,89 @@ async function loadHistory() {
   const historyTableBody = document.getElementById("historyTableBody");
   
   try {
-    const result = await chrome.storage.local.get(['summaryHistory']);
+    const result = await platform.storage.get('local', ['summaryHistory']);
     const history = result.summaryHistory || [];
-    
+
+    historyTableBody.textContent = "";
+
     if (history.length === 0) {
-      historyTableBody.innerHTML = `
-        <tr>
-          <td colspan="5" style="text-align: center; padding: 40px;">
-            <div class="empty-state" style="padding: 20px; margin: 0;">
-              <h2>No Summary History Yet</h2>
-              <p>Summarize some pages using the extension to see them appear here. Your summaries will be saved automatically.</p>
-            </div>
-          </td>
-        </tr>
-      `;
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 5;
+      cell.style.textAlign = "center";
+      cell.style.padding = "40px";
+
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.style.padding = "20px";
+      empty.style.margin = "0";
+
+      const title = document.createElement("h2");
+      title.textContent = "No Summary History Yet";
+      const message = document.createElement("p");
+      message.textContent = "Summarize some pages using the extension to see them appear here. Your summaries will be saved automatically.";
+
+      empty.appendChild(title);
+      empty.appendChild(message);
+      cell.appendChild(empty);
+      row.appendChild(cell);
+      historyTableBody.appendChild(row);
       return;
     }
-    
-    historyTableBody.innerHTML = history.map((item, index) => {
+
+    const fragment = document.createDocumentFragment();
+    history.forEach((item, index) => {
       const sourceUrl = item.sourceUrl || item.url || extractSource(item.summary);
       const title = item.title || "";
       const preview = item.contentPreview || createContentPreview(item.summary);
       const formattedDate = formatDate(item.timestamp);
       const formattedTime = formatTime(item.timestamp);
-      
-      // Fallbacks
+
       const displaySource = sourceUrl || 'Unknown Source';
       const displayTitle = title || 'Untitled';
-      
-      return `
-        <tr class="history-row" data-index="${index}">
-          <td class="url-cell">
-            <div>${displayTitle}</div>
-            <div class="source-url">${displaySource}</div>
-          </td>
-          <td class="preview-cell">${preview}</td>
-          <td class="date-cell">${formattedDate} ${formattedTime}</td>
-          <td class="delete-cell">
-            <button class="delete-btn" data-index="${index}" title="Delete summary">🗑️</button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+
+      const row = document.createElement("tr");
+      row.className = "history-row";
+      row.dataset.index = String(index);
+
+      const urlCell = document.createElement("td");
+      urlCell.className = "url-cell";
+
+      const titleDiv = document.createElement("div");
+      titleDiv.textContent = displayTitle;
+      const sourceDiv = document.createElement("div");
+      sourceDiv.className = "source-url";
+      sourceDiv.textContent = displaySource;
+
+      urlCell.appendChild(titleDiv);
+      urlCell.appendChild(sourceDiv);
+
+      const previewCell = document.createElement("td");
+      previewCell.className = "preview-cell";
+      previewCell.textContent = preview;
+
+      const dateCell = document.createElement("td");
+      dateCell.className = "date-cell";
+      dateCell.textContent = `${formattedDate} ${formattedTime}`;
+
+      const deleteCell = document.createElement("td");
+      deleteCell.className = "delete-cell";
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-btn";
+      deleteBtn.dataset.index = String(index);
+      deleteBtn.title = "Delete summary";
+      deleteBtn.textContent = "🗑️";
+      deleteCell.appendChild(deleteBtn);
+
+      row.appendChild(urlCell);
+      row.appendChild(previewCell);
+      row.appendChild(dateCell);
+      row.appendChild(deleteCell);
+
+      fragment.appendChild(row);
+    });
+
+    historyTableBody.appendChild(fragment);
     
     // Add click event to history rows to view full summary
     document.querySelectorAll('.history-row').forEach(row => {
@@ -112,7 +154,7 @@ async function loadHistory() {
  */
 async function clearHistory() {
   try {
-    await chrome.storage.local.set({ summaryHistory: [] });
+    await platform.storage.set('local', { summaryHistory: [] });
     showNotification("History cleared successfully!", "success");
   } catch (error) {
     console.error("Error clearing history:", error);
@@ -127,12 +169,12 @@ async function clearHistory() {
  */
 async function deleteHistoryItem(index) {
   try {
-    const result = await chrome.storage.local.get(['summaryHistory']);
+    const result = await platform.storage.get('local', ['summaryHistory']);
     const history = result.summaryHistory || [];
     
     if (index >= 0 && index < history.length) {
       history.splice(index, 1);
-      await chrome.storage.local.set({ summaryHistory: history });
+      await platform.storage.set('local', { summaryHistory: history });
       showNotification("Summary deleted!", "success");
     }
   } catch (error) {
@@ -146,7 +188,7 @@ async function deleteHistoryItem(index) {
  * @param {number} index
  */
 function viewFullSummary(index) {
-  chrome.storage.local.get(['summaryHistory'], (result) => {
+  platform.storage.get('local', ['summaryHistory']).then((result) => {
     const history = result.summaryHistory || [];
     if (index >= 0 && index < history.length) {
       const item = history[index];
@@ -156,11 +198,11 @@ function viewFullSummary(index) {
       })
         .then((id) => {
           const encoded = encodeURIComponent(id);
-          chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?id=${encoded}`) });
+          platform.tabs.create({ url: platform.runtime.getURL(`results.html?id=${encoded}`) });
         })
         .catch(() => {
           const encoded = encodeURIComponent(item.summary);
-          chrome.tabs.create({ url: chrome.runtime.getURL(`results.html?text=${encoded}`) });
+          platform.tabs.create({ url: platform.runtime.getURL(`results.html?text=${encoded}`) });
         });
     }
   });
