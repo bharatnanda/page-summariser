@@ -22,6 +22,7 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
 - **Domain Blacklisting**: Prevents summarization on restricted domains with a comprehensive default list for security and privacy
 - **Multi-Language Support**: Summarize content in multiple languages
 - **Responsive Design**: Works on all device sizes
+- **Consistent Toasts**: In-page toast messages for success/error feedback across browsers
 
 ## Installation
 
@@ -199,6 +200,12 @@ Open the generated Xcode project in `safari-app/`, enable the extension, and bui
 npm run clean
 ```
 
+#### Run tests
+
+```
+npm test
+```
+
 #### Platform Overrides
 
 If you need platform-specific changes, place files in:
@@ -230,7 +237,7 @@ Those files override `core/` during the build.
 
 #### Error Handling
 - Customize error messages in provider-specific clients
-- Modify notification behavior in individual JavaScript files
+- Modify toast behavior in `popup.js`, `results.js`, and `history.js`
 
 ## Troubleshooting
 
