@@ -41,7 +41,7 @@ function pruneStore(store) {
 /**
  * Save a summary for short-term viewing and return its ID.
  * @param {string} summary
- * @param {{ title?: string, sourceUrl?: string }} meta
+ * @param {{ title?: string, sourceUrl?: string, provider?: string, model?: string }} meta
  * @returns {Promise<string>}
  */
 export async function saveSummaryForView(summary, meta = {}) {
@@ -54,6 +54,8 @@ export async function saveSummaryForView(summary, meta = {}) {
     summary,
     title: meta.title || "",
     sourceUrl: meta.sourceUrl || "",
+    provider: meta.provider || "",
+    model: meta.model || "",
     timestamp: Date.now()
   };
 
@@ -65,7 +67,7 @@ export async function saveSummaryForView(summary, meta = {}) {
 /**
  * Load a saved summary by ID.
  * @param {string} id
- * @returns {Promise<{ summary: string, title: string, sourceUrl: string, timestamp: number } | null>}
+ * @returns {Promise<{ summary: string, title: string, sourceUrl: string, provider?: string, model?: string, timestamp: number } | null>}
  */
 export async function loadSummaryForView(id) {
   if (!id) return null;

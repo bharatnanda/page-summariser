@@ -25,6 +25,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const articleMeta = document.getElementById("articleMeta");
   const articleTitle = document.getElementById("articleTitle");
   const articleSource = document.getElementById("articleSource");
+  const articleProviderModel = document.getElementById("articleProviderModel");
   const summaryMetrics = document.getElementById("summaryMetrics");
 
   // Get summary text from URL query params
@@ -33,7 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const summaryId = params.get("id");
   const streamId = params.get("streamId");
   let decodedText = "No summary available.";
-  let summaryMeta = { title: "", sourceUrl: "" };
+  let summaryMeta = { title: "", sourceUrl: "", provider: "", model: "" };
 
   const renderer = window.marked ? new marked.Renderer() : null;
   if (renderer) {
@@ -68,7 +69,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         decodedText = stored.summary;
         summaryMeta = {
           title: stored.title || "",
-          sourceUrl: stored.sourceUrl || ""
+          sourceUrl: stored.sourceUrl || "",
+          provider: stored.provider || "",
+          model: stored.model || ""
         };
       } else if (typeof stored === "string") {
         decodedText = stored;
@@ -103,13 +106,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         summaryMeta = {
           title: message.title || summaryMeta.title,
-          sourceUrl: message.sourceUrl || summaryMeta.sourceUrl
+          sourceUrl: message.sourceUrl || summaryMeta.sourceUrl,
+          provider: summaryMeta.provider,
+          model: summaryMeta.model
         };
         renderMeta(summaryMeta);
         if (message.summaryId) {
           const encoded = encodeURIComponent(message.summaryId);
           const url = platform.runtime.getURL(`results.html?id=${encoded}`);
           window.history.replaceState(null, "", url);
+          loadMetaFromStore(message.summaryId);
         }
         return;
       }
@@ -158,13 +164,14 @@ document.addEventListener("DOMContentLoaded", async () => {
    */
   /**
    * Render article metadata.
-   * @param {{ title?: string, sourceUrl?: string }} meta
+   * @param {{ title?: string, sourceUrl?: string, provider?: string, model?: string }} meta
    */
   function renderMeta(meta) {
     if (!articleMeta) return;
     const hasTitle = Boolean(meta?.title);
     const hasSource = Boolean(meta?.sourceUrl);
-    if (!hasTitle && !hasSource) {
+    const hasProviderModel = Boolean((meta?.provider || "").trim() || (meta?.model || "").trim());
+    if (!hasTitle && !hasSource && !hasProviderModel) {
       articleMeta.hidden = true;
       return;
     }
@@ -180,7 +187,33 @@ document.addEventListener("DOMContentLoaded", async () => {
         articleSource.removeAttribute("href");
       }
     }
+    if (articleProviderModel) {
+      if (hasProviderModel) {
+        articleProviderModel.textContent = [meta.provider, meta.model].filter(Boolean).join(" • ");
+        articleProviderModel.hidden = false;
+      } else {
+        articleProviderModel.textContent = "";
+        articleProviderModel.hidden = true;
+      }
+    }
     articleMeta.hidden = false;
+  }
+
+  async function loadMetaFromStore(id) {
+    try {
+      const stored = await loadSummaryForView(id);
+      if (stored?.summary) {
+        summaryMeta = {
+          title: stored.title || summaryMeta.title,
+          sourceUrl: stored.sourceUrl || summaryMeta.sourceUrl,
+          provider: stored.provider || summaryMeta.provider,
+          model: stored.model || summaryMeta.model
+        };
+        renderMeta(summaryMeta);
+      }
+    } catch (error) {
+      // Ignore summary store errors.
+    }
   }
 
   function updateWordCount(text) {

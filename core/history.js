@@ -2,6 +2,7 @@ import { createContentPreview } from './utils/preview.js';
 import { saveSummaryForView } from './utils/summaryStore.js';
 import { showNotification } from './utils/notification.js';
 import { storageGetWithFallback, storageSetWithFallback } from './utils/storage.js';
+import { platform } from './platform.js';
 
 document.addEventListener("DOMContentLoaded", async () => {
   const historyTableBody = document.getElementById("historyTableBody");
@@ -69,6 +70,8 @@ async function loadHistory() {
     history.forEach((item, index) => {
       const sourceUrl = item.sourceUrl || item.url || extractSource(item.summary);
       const title = item.title || "";
+      const provider = item.provider || "";
+      const model = item.model || "";
       const preview = item.contentPreview || createContentPreview(item.summary);
       const formattedDate = formatDate(item.timestamp);
       const formattedTime = formatTime(item.timestamp);
@@ -91,6 +94,13 @@ async function loadHistory() {
 
       urlCell.appendChild(titleDiv);
       urlCell.appendChild(sourceDiv);
+
+      if (provider || model) {
+        const modelDiv = document.createElement("div");
+        modelDiv.className = "provider-model";
+        modelDiv.textContent = [provider, model].filter(Boolean).join(" • ");
+        urlCell.appendChild(modelDiv);
+      }
 
       const previewCell = document.createElement("td");
       previewCell.className = "preview-cell";
@@ -203,7 +213,9 @@ function viewFullSummary(index) {
       const item = history[index];
       saveSummaryForView(item.summary, {
         title: item.title || "",
-        sourceUrl: item.sourceUrl || item.url || ""
+        sourceUrl: item.sourceUrl || item.url || "",
+        provider: item.provider || "",
+        model: item.model || ""
       })
         .then((id) => {
           const encoded = encodeURIComponent(id);

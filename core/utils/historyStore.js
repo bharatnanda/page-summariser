@@ -16,9 +16,10 @@ function trimSummaryForHistory(summary) {
  * @param {string} url
  * @param {string} summary
  * @param {string} title
- * @returns {{ url: string, sourceUrl: string, title: string, summary: string, timestamp: string, contentPreview: string }}
+ * @param {{ provider?: string, model?: string }} meta
+ * @returns {{ url: string, sourceUrl: string, title: string, summary: string, timestamp: string, contentPreview: string, provider?: string, model?: string }}
  */
-export function createHistoryItem(url, summary, title = "") {
+export function createHistoryItem(url, summary, title = "", meta = {}) {
   const trimmedSummary = trimSummaryForHistory(summary);
   return {
     url,
@@ -26,7 +27,9 @@ export function createHistoryItem(url, summary, title = "") {
     title: title || "",
     summary: trimmedSummary,
     timestamp: new Date().toISOString(),
-    contentPreview: createContentPreview(trimmedSummary)
+    contentPreview: createContentPreview(trimmedSummary),
+    provider: meta.provider || "",
+    model: meta.model || ""
   };
 }
 

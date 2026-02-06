@@ -11,6 +11,8 @@ import { platform } from '../platform.js';
  * @typedef {Object} SummaryMeta
  * @property {string} [title]
  * @property {string} [sourceUrl]
+ * @property {string} [provider]
+ * @property {string} [model]
  */
 
 /**
@@ -69,10 +71,11 @@ async function incrementPageCount() {
  * @param {string} url
  * @param {string} summary
  * @param {string} title
+ * @param {{ provider?: string, model?: string }} meta
  * @returns {Promise<void>}
  */
-async function saveToHistory(url, summary, title) {
-  const historyItem = createHistoryItem(url, summary, title);
+async function saveToHistory(url, summary, title, meta = {}) {
+  const historyItem = createHistoryItem(url, summary, title, meta);
   await addHistoryItem(historyItem);
 }
 
@@ -81,7 +84,7 @@ async function saveToHistory(url, summary, title) {
  * @param {string} content
  * @param {string} pageURL
  * @param {{ onDelta?: (delta: string) => void, title?: string }} options
- * @returns {Promise<string>}
+ * @returns {Promise<{ summary: string, settings: import('./settings.js').Settings }>}
  */
 async function generateSummary(content, pageURL, options = {}) {
   const { onDelta } = options;
@@ -114,8 +117,11 @@ async function generateSummary(content, pageURL, options = {}) {
     throw new Error("The AI model failed to generate a summary. Please try again later.");
   }
 
-  await saveToHistory(pageURL, summary, options.title || "");
-  return summary;
+  await saveToHistory(pageURL, summary, options.title || "", {
+    provider: settings.provider,
+    model: settings.model
+  });
+  return { summary, settings };
 }
 
 /**
@@ -155,7 +161,9 @@ export const summarySession = {
 
     const summaryId = await saveAndOpen(cachedSummary.summary, {
       title: cachedSummary.title || "",
-      sourceUrl: cachedSummary.sourceUrl || ""
+      sourceUrl: cachedSummary.sourceUrl || "",
+      provider: cachedSummary.provider || "",
+      model: cachedSummary.model || ""
     });
 
     return { handled: true, summary: cachedSummary.summary, summaryId };
@@ -167,17 +175,27 @@ export const summarySession = {
    * @returns {Promise<SummarySessionResult>}
    */
   async runNonStreaming({ content, pageURL, title, incrementCounter, cacheKey }) {
-    const summary = await generateSummary(content, pageURL, { title });
+    const { summary, settings } = await generateSummary(content, pageURL, { title });
 
     if (cacheKey) {
-      await cacheSummary(cacheKey, summary, { title, sourceUrl: pageURL });
+      await cacheSummary(cacheKey, summary, {
+        title,
+        sourceUrl: pageURL,
+        provider: settings.provider,
+        model: settings.model
+      });
     }
 
     if (incrementCounter) {
       await incrementPageCount();
     }
 
-    const summaryId = await saveAndOpen(summary, { title, sourceUrl: pageURL });
+    const summaryId = await saveAndOpen(summary, {
+      title,
+      sourceUrl: pageURL,
+      provider: settings.provider,
+      model: settings.model
+    });
     return { summary, summaryId };
   },
 
@@ -189,10 +207,15 @@ export const summarySession = {
   async runStreaming({ content, pageURL, title, incrementCounter, cacheKey, streamId, onDelta }) {
     openResultsPage({ streamId });
 
-    const summary = await generateSummary(content, pageURL, { title, onDelta });
+    const { summary, settings } = await generateSummary(content, pageURL, { title, onDelta });
 
     if (cacheKey) {
-      await cacheSummary(cacheKey, summary, { title, sourceUrl: pageURL });
+      await cacheSummary(cacheKey, summary, {
+        title,
+        sourceUrl: pageURL,
+        provider: settings.provider,
+        model: settings.model
+      });
     }
 
     if (incrementCounter) {
@@ -201,7 +224,12 @@ export const summarySession = {
 
     let summaryId = null;
     try {
-      summaryId = await saveSummaryForView(summary, { title, sourceUrl: pageURL });
+      summaryId = await saveSummaryForView(summary, {
+        title,
+        sourceUrl: pageURL,
+        provider: settings.provider,
+        model: settings.model
+      });
     } catch (error) {
       // Ignore summary store errors.
     }
