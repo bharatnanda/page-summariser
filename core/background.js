@@ -102,11 +102,13 @@ platform.runtime.onConnect.addListener((port) => {
 
 // Create context menu item when extension is installed
 platform.runtime.onInstalled.addListener(() => {
-  platform.contextMenus.create({
-    id: "summarizePage",
-    title: "Summarize this page",
-    contexts: ["page"]
-  });
+  if (!platform.isSafari) {
+    platform.contextMenus.create({
+      id: "summarizePage",
+      title: "Summarize this page",
+      contexts: ["page"]
+    });
+  }
   
   // Clear expired cache on installation
   clearExpiredCache();
