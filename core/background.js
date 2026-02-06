@@ -73,6 +73,59 @@ function waitForStreamReady(streamId, timeoutMs = 2000) {
   ]);
 }
 
+async function showInPageToast(message, type = "info") {
+  try {
+    const [tab] = await platform.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
+    await platform.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: (msg, variant) => {
+        const id = 'page-summarizer-toast';
+        let el = document.getElementById(id);
+        if (!el) {
+          el = document.createElement('div');
+          el.id = id;
+          el.style.cssText = [
+            'position:fixed',
+            'top:20px',
+            'right:20px',
+            'z-index:2147483647',
+            'max-width:360px',
+            'color:#fff',
+            'padding:12px 14px',
+            'border-radius:8px',
+            'font:12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif',
+            'box-shadow:0 6px 18px rgba(0,0,0,0.2)'
+          ].join(';');
+          document.documentElement.appendChild(el);
+        }
+        const colors = {
+          error: '#b91c1c',
+          warning: '#b45309',
+          success: '#15803d',
+          info: '#1f2937'
+        };
+        el.style.background = colors[variant] || colors.info;
+        el.textContent = msg;
+        el.style.display = 'block';
+        if (window.__PAGE_SUMMARIZER_TOAST_TIMER) {
+          window.clearTimeout(window.__PAGE_SUMMARIZER_TOAST_TIMER);
+        }
+        window.__PAGE_SUMMARIZER_TOAST_TIMER = window.setTimeout(() => {
+          el.style.display = 'none';
+        }, 4000);
+      },
+      args: [message, type]
+    });
+  } catch (error) {
+    console.error("Failed to show in-page toast:", error);
+  }
+}
+
+async function notifyToast(message, type = "info") {
+  await showInPageToast(message, type);
+}
+
 platform.runtime.onConnect.addListener((port) => {
   if (!port.name.startsWith("summaryStream:")) return;
   const streamId = port.name.slice("summaryStream:".length);
@@ -139,12 +192,7 @@ platform.contextMenus.onClicked.addListener((info, tab) => {
       });
     }).catch(err => {
       console.error("Failed to summarize page:", err);
-      platform.notifications.create({
-        type: 'basic',
-        iconUrl: 'icon.png',
-        title: 'Summarization Error',
-        message: err.message || 'Failed to summarize this page. Please try again or use the popup instead.'
-      });
+      notifyToast(err.message || 'Failed to summarize this page. Please try again or use the popup instead.', 'error');
     });
   }
 });
@@ -202,12 +250,7 @@ async function startSummaryStream({ content, pageURL, title, incrementCounter, c
       });
     } catch (err) {
       console.error("Summarize error:", err);
-      platform.notifications.create({
-        type: 'basic',
-        iconUrl: 'icon.png',
-        title: 'Summarization Error',
-        message: err.message || 'Failed to summarize this page. Please try again.'
-      });
+      await notifyToast(err.message || 'Failed to summarize this page. Please try again.', 'error');
     }
     return null;
   }
@@ -242,12 +285,7 @@ async function startSummaryStream({ content, pageURL, title, incrementCounter, c
       type: "error",
       message: err.message || "Failed to summarize this page."
     });
-    platform.notifications.create({
-      type: 'basic',
-      iconUrl: 'icon.png',
-      title: 'Summarization Error',
-      message: err.message || 'Failed to summarize this page. Please try again.'
-    });
+    await notifyToast(err.message || 'Failed to summarize this page. Please try again.', 'error');
   } finally {
     setTimeout(() => cleanupStream(streamId), 30000);
   }

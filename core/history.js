@@ -19,6 +19,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadHistory();
 });
 
+async function storageGet(keys) {
+  try {
+    return await platform.storage.get('local', keys);
+  } catch (error) {
+    return await platform.storage.get('sync', keys);
+  }
+}
+
+async function storageSet(value) {
+  try {
+    await platform.storage.set('local', value);
+  } catch (error) {
+    await platform.storage.set('sync', value);
+  }
+}
+
 /**
  * Load summary history and render the table.
  * @returns {Promise<void>}
@@ -27,7 +43,7 @@ async function loadHistory() {
   const historyTableBody = document.getElementById("historyTableBody");
   
   try {
-    const result = await platform.storage.get('local', ['summaryHistory']);
+    const result = await storageGet(['summaryHistory']);
     const history = result.summaryHistory || [];
 
     historyTableBody.textContent = "";
@@ -115,7 +131,7 @@ async function loadHistory() {
     document.querySelectorAll('.history-row').forEach(row => {
       row.addEventListener('click', (e) => {
         // Don't trigger if clicking on delete button
-        if (e.target.classList.contains('delete-btn')) {
+        if (e.target.closest && e.target.closest('.delete-btn')) {
           return;
         }
         
@@ -128,7 +144,8 @@ async function loadHistory() {
     document.querySelectorAll('.delete-btn').forEach(button => {
       button.addEventListener('click', async (e) => {
         e.stopPropagation(); // Prevent triggering the row click
-        const index = parseInt(e.target.getAttribute('data-index'));
+        const target = e.currentTarget;
+        const index = parseInt(target.getAttribute('data-index'));
         await deleteHistoryItem(index);
         await loadHistory();
       });
@@ -154,7 +171,7 @@ async function loadHistory() {
  */
 async function clearHistory() {
   try {
-    await platform.storage.set('local', { summaryHistory: [] });
+    await storageSet({ summaryHistory: [] });
     showNotification("History cleared successfully!", "success");
   } catch (error) {
     console.error("Error clearing history:", error);
@@ -169,12 +186,12 @@ async function clearHistory() {
  */
 async function deleteHistoryItem(index) {
   try {
-    const result = await platform.storage.get('local', ['summaryHistory']);
+    const result = await storageGet(['summaryHistory']);
     const history = result.summaryHistory || [];
     
     if (index >= 0 && index < history.length) {
       history.splice(index, 1);
-      await platform.storage.set('local', { summaryHistory: history });
+      await storageSet({ summaryHistory: history });
       showNotification("Summary deleted!", "success");
     }
   } catch (error) {
@@ -188,7 +205,7 @@ async function deleteHistoryItem(index) {
  * @param {number} index
  */
 function viewFullSummary(index) {
-  platform.storage.get('local', ['summaryHistory']).then((result) => {
+  storageGet(['summaryHistory']).then((result) => {
     const history = result.summaryHistory || [];
     if (index >= 0 && index < history.length) {
       const item = history[index];
@@ -259,14 +276,36 @@ function extractSource(summary) {
  * @param {string} message
  * @param {"success"|"error"} type
  */
-function showNotification(message, type) {
+function showNotification(message, type = "info") {
   const notification = document.getElementById("notification");
   if (!notification) return;
-  
+
+  const colors = {
+    error: '#b91c1c',
+    warning: '#b45309',
+    success: '#15803d',
+    info: '#1f2937'
+  };
   notification.textContent = message;
+  notification.style.cssText = [
+    'position:fixed',
+    'top:20px',
+    'right:20px',
+    'z-index:2147483647',
+    'max-width:360px',
+    'color:#fff',
+    'padding:12px 14px',
+    'border-radius:8px',
+    'font:12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif',
+    'box-shadow:0 6px 18px rgba(0,0,0,0.2)',
+    `background:${colors[type] || colors.info}`
+  ].join(';');
   notification.className = `notification ${type} show`;
-  
-  setTimeout(() => {
+
+  if (window.__PAGE_SUMMARIZER_TOAST_TIMER) {
+    window.clearTimeout(window.__PAGE_SUMMARIZER_TOAST_TIMER);
+  }
+  window.__PAGE_SUMMARIZER_TOAST_TIMER = window.setTimeout(() => {
     notification.classList.remove("show");
   }, 3000);
 }
