@@ -1,11 +1,11 @@
 import { createContentPreview } from './utils/preview.js';
 import { saveSummaryForView } from './utils/summaryStore.js';
-import { platform } from './platform.js';
+import { showNotification } from './utils/notification.js';
+import { storageGetWithFallback, storageSetWithFallback } from './utils/storage.js';
 
 document.addEventListener("DOMContentLoaded", async () => {
   const historyTableBody = document.getElementById("historyTableBody");
   const clearHistoryBtn = document.getElementById("clearHistoryBtn");
-  const notification = document.getElementById("notification");
 
   // Clear history event
   clearHistoryBtn.addEventListener("click", async () => {
@@ -19,20 +19,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadHistory();
 });
 
-async function storageGet(keys) {
-  try {
-    return await platform.storage.get('local', keys);
-  } catch (error) {
-    return await platform.storage.get('sync', keys);
-  }
+function storageGet(keys) {
+  return storageGetWithFallback(keys, 'local', 'sync');
 }
 
-async function storageSet(value) {
-  try {
-    await platform.storage.set('local', value);
-  } catch (error) {
-    await platform.storage.set('sync', value);
-  }
+function storageSet(value) {
+  return storageSetWithFallback(value, 'local', 'sync');
 }
 
 /**
@@ -172,10 +164,10 @@ async function loadHistory() {
 async function clearHistory() {
   try {
     await storageSet({ summaryHistory: [] });
-    showNotification("History cleared successfully!", "success");
+    showNotification(document.getElementById("notification"), "History cleared successfully!", "success");
   } catch (error) {
     console.error("Error clearing history:", error);
-    showNotification("Failed to clear history", "error");
+    showNotification(document.getElementById("notification"), "Failed to clear history", "error");
   }
 }
 
@@ -192,11 +184,11 @@ async function deleteHistoryItem(index) {
     if (index >= 0 && index < history.length) {
       history.splice(index, 1);
       await storageSet({ summaryHistory: history });
-      showNotification("Summary deleted!", "success");
+      showNotification(document.getElementById("notification"), "Summary deleted!", "success");
     }
   } catch (error) {
     console.error("Error deleting history item:", error);
-    showNotification("Failed to delete summary", "error");
+    showNotification(document.getElementById("notification"), "Failed to delete summary", "error");
   }
 }
 
@@ -276,36 +268,3 @@ function extractSource(summary) {
  * @param {string} message
  * @param {"success"|"error"} type
  */
-function showNotification(message, type = "info") {
-  const notification = document.getElementById("notification");
-  if (!notification) return;
-
-  const colors = {
-    error: '#b91c1c',
-    warning: '#b45309',
-    success: '#15803d',
-    info: '#1f2937'
-  };
-  notification.textContent = message;
-  notification.style.cssText = [
-    'position:fixed',
-    'top:20px',
-    'right:20px',
-    'z-index:2147483647',
-    'max-width:360px',
-    'color:#fff',
-    'padding:12px 14px',
-    'border-radius:8px',
-    'font:12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif',
-    'box-shadow:0 6px 18px rgba(0,0,0,0.2)',
-    `background:${colors[type] || colors.info}`
-  ].join(';');
-  notification.className = `notification ${type} show`;
-
-  if (window.__PAGE_SUMMARIZER_TOAST_TIMER) {
-    window.clearTimeout(window.__PAGE_SUMMARIZER_TOAST_TIMER);
-  }
-  window.__PAGE_SUMMARIZER_TOAST_TIMER = window.setTimeout(() => {
-    notification.classList.remove("show");
-  }, 3000);
-}

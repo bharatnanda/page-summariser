@@ -1,5 +1,5 @@
 import { createContentPreview } from './preview.js';
-import { platform } from '../platform.js';
+import { storageGetWithFallback, storageSetWithFallback } from './storage.js';
 
 const MAX_HISTORY_SUMMARY_CHARS = 8000;
 const MAX_HISTORY_ITEMS = 50;
@@ -55,11 +55,11 @@ export function isDuplicateHistoryItem(history, item) {
 }
 
 function storageGet(keys) {
-  return platform.storage.get('local', keys);
+  return storageGetWithFallback(keys, 'local', 'sync');
 }
 
 function storageSet(value) {
-  return platform.storage.set('local', value);
+  return storageSetWithFallback(value, 'local', 'sync');
 }
 
 /**

@@ -3,6 +3,8 @@ import { getSettings } from './utils/settings.js';
 import { clearExpiredCache } from './utils/cache.js';
 import { platform } from './platform.js';
 import { summarySession } from './utils/summarySession.js';
+import { DEFAULT_BLACKLIST } from './utils/defaultBlacklist.js';
+import { buildToastStyle } from './utils/notification.js';
 
 const activeStreams = new Map();
 
@@ -79,33 +81,15 @@ async function showInPageToast(message, type = "info") {
     if (!tab?.id) return;
     await platform.scripting.executeScript({
       target: { tabId: tab.id },
-      func: (msg, variant) => {
+      func: (msg, variant, cssText) => {
         const id = 'page-summarizer-toast';
         let el = document.getElementById(id);
         if (!el) {
           el = document.createElement('div');
           el.id = id;
-          el.style.cssText = [
-            'position:fixed',
-            'top:20px',
-            'right:20px',
-            'z-index:2147483647',
-            'max-width:360px',
-            'color:#fff',
-            'padding:12px 14px',
-            'border-radius:8px',
-            'font:12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif',
-            'box-shadow:0 6px 18px rgba(0,0,0,0.2)'
-          ].join(';');
           document.documentElement.appendChild(el);
         }
-        const colors = {
-          error: '#b91c1c',
-          warning: '#b45309',
-          success: '#15803d',
-          info: '#1f2937'
-        };
-        el.style.background = colors[variant] || colors.info;
+        el.style.cssText = cssText;
         el.textContent = msg;
         el.style.display = 'block';
         if (window.__PAGE_SUMMARIZER_TOAST_TIMER) {
@@ -115,7 +99,7 @@ async function showInPageToast(message, type = "info") {
           el.style.display = 'none';
         }, 4000);
       },
-      args: [message, type]
+      args: [message, type, buildToastStyle(type)]
     });
   } catch (error) {
     console.error("Failed to show in-page toast:", error);
@@ -154,13 +138,26 @@ platform.runtime.onConnect.addListener((port) => {
 });
 
 // Create context menu item when extension is installed
-platform.runtime.onInstalled.addListener(() => {
+platform.runtime.onInstalled.addListener(async () => {
   if (!platform.isSafari) {
     platform.contextMenus.create({
       id: "summarizePage",
       title: "Summarize this page",
       contexts: ["page"]
     });
+  }
+
+  try {
+    const result = await platform.storage.get('sync', ['defaultBlacklistedUrls', 'defaultBlacklistInitialized']);
+    const hasDefault = Boolean((result.defaultBlacklistedUrls || "").trim());
+    if (!hasDefault && !result.defaultBlacklistInitialized) {
+      await platform.storage.set('sync', {
+        defaultBlacklistedUrls: DEFAULT_BLACKLIST,
+        defaultBlacklistInitialized: true
+      });
+    }
+  } catch (error) {
+    // Ignore storage errors on install.
   }
   
   // Clear expired cache on installation

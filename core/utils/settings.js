@@ -1,4 +1,5 @@
 import { platform } from '../platform.js';
+import { DEFAULT_BLACKLIST } from './defaultBlacklist.js';
 
 /**
  * @typedef {Object} ProviderSettings
@@ -29,7 +30,7 @@ import { platform } from '../platform.js';
  */
 
 export async function getSettings() {
-  const keys = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "blacklistedUrls", "defaultBlacklistedUrls"];
+  const keys = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "blacklistedUrls", "defaultBlacklistedUrls", "defaultBlacklistInitialized"];
   let settings = {};
   try {
     settings = await platform.storage.get('sync', keys);
@@ -58,7 +59,24 @@ export async function getSettings() {
     model: (resolved.model || "").trim(),
     language: (settings.language || "").trim(),
     blacklistedUrls: (settings.blacklistedUrls || "").trim(),
-    defaultBlacklistedUrls: (settings.defaultBlacklistedUrls || "").trim(),
+    defaultBlacklistedUrls: await resolveDefaultBlacklist(settings),
     disableStreamingOnSafari,
   };
+}
+
+async function resolveDefaultBlacklist(settings) {
+  const current = (settings.defaultBlacklistedUrls || "").trim();
+  if (current) return current;
+  if (settings.defaultBlacklistInitialized) return "";
+
+  const seeded = DEFAULT_BLACKLIST;
+  const value = { defaultBlacklistedUrls: seeded, defaultBlacklistInitialized: true };
+
+  try {
+    await platform.storage.set('sync', value);
+  } catch (error) {
+    await platform.storage.set('local', value);
+  }
+
+  return seeded;
 }

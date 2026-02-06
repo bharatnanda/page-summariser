@@ -1,4 +1,5 @@
 import { loadSummaryForView } from './utils/summaryStore.js';
+import { showNotification } from './utils/notification.js';
 import { platform } from './platform.js';
 
 /**
@@ -122,10 +123,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Copy summary to clipboard
   copyBtn?.addEventListener("click", () => {
     navigator.clipboard.writeText(decodedText)
-      .then(() => showNotification("Summary copied to clipboard!", "success"))
+      .then(() => showNotification(notification, "Summary copied to clipboard!", "success"))
       .catch(err => {
         console.error("Clipboard error:", err);
-        showNotification("Failed to copy summary", "error");
+        showNotification(notification, "Failed to copy summary", "error");
       });
   });
 
@@ -141,7 +142,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     a.remove();
     URL.revokeObjectURL(url);
     
-    showNotification("Summary downloaded!", "success");
+    showNotification(notification, "Summary downloaded!", "success");
   });
 
   // History button functionality
@@ -155,37 +156,6 @@ document.addEventListener("DOMContentLoaded", async () => {
    * @param {string} message
    * @param {"success"|"error"} type
    */
-  function showNotification(message, type = "info") {
-    const colors = {
-      error: '#b91c1c',
-      warning: '#b45309',
-      success: '#15803d',
-      info: '#1f2937'
-    };
-    if (!notification) return;
-    notification.textContent = message;
-    notification.style.cssText = [
-      'position:fixed',
-      'top:20px',
-      'right:20px',
-      'z-index:2147483647',
-      'max-width:360px',
-      'color:#fff',
-      'padding:12px 14px',
-      'border-radius:8px',
-      'font:12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif',
-      'box-shadow:0 6px 18px rgba(0,0,0,0.2)',
-      `background:${colors[type] || colors.info}`
-    ].join(';');
-    notification.className = `notification ${type} show`;
-    if (window.__PAGE_SUMMARIZER_TOAST_TIMER) {
-      window.clearTimeout(window.__PAGE_SUMMARIZER_TOAST_TIMER);
-    }
-    window.__PAGE_SUMMARIZER_TOAST_TIMER = window.setTimeout(() => {
-      notification.classList.remove("show");
-    }, 3000);
-  }
-
   /**
    * Render article metadata.
    * @param {{ title?: string, sourceUrl?: string }} meta

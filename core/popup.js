@@ -1,5 +1,6 @@
-import { getPageContent, getPageUrl } from './utils/contentExtractor.js';
+import { getPageContent } from './utils/contentExtractor.js';
 import { saveSummaryForView } from './utils/summaryStore.js';
+import { showNotification } from './utils/notification.js';
 import { platform } from './platform.js';
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -23,12 +24,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       summarizeBtn.innerHTML = '<span>Loading...</span>';
       summarizeBtn.disabled = true;
       
-      const pageURL = await getPageUrl();
-
       const pageData = await getPageContent();
       if (!pageData?.content) {
         throw new Error("No content found on this page. Please try another page.");
       }
+      const pageURL = pageData.sourceUrl || "";
 
       const response = await platform.runtime.sendMessage({
         action: "streamSummary",
@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     } catch (err) {
       console.error("Summarize error:", err);
-      showNotification(`${err.message}`, "error");
+      showNotification(notification, `${err.message}`, "error");
     } finally {
       // Restore button state
       summarizeBtn.innerHTML = originalBtnText;
@@ -73,39 +73,6 @@ async function showSummary(summaryText, meta = {}) {
  * @param {string} message
  * @param {"success"|"error"} type
  */
-function showNotification(message, type = "info") {
-  const notification = document.getElementById("notification");
-  if (!notification) return;
-
-  const colors = {
-    error: '#b91c1c',
-    warning: '#b45309',
-    success: '#15803d',
-    info: '#1f2937'
-  };
-  notification.textContent = message;
-  notification.style.cssText = [
-    'position:fixed',
-    'top:20px',
-    'right:20px',
-    'z-index:2147483647',
-    'max-width:360px',
-    'color:#fff',
-    'padding:12px 14px',
-    'border-radius:8px',
-    'font:12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif',
-    'box-shadow:0 6px 18px rgba(0,0,0,0.2)',
-    `background:${colors[type] || colors.info}`
-  ].join(';');
-  notification.className = `notification ${type} show`;
-
-  if (window.__PAGE_SUMMARIZER_TOAST_TIMER) {
-    window.clearTimeout(window.__PAGE_SUMMARIZER_TOAST_TIMER);
-  }
-  window.__PAGE_SUMMARIZER_TOAST_TIMER = window.setTimeout(() => {
-    notification.classList.remove("show");
-  }, 3000);
-}
 
 /**
  * Increment the "pages summarized" counter.
