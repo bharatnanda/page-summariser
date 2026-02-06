@@ -4,6 +4,8 @@
  */
 const api = globalThis.browser || globalThis.chrome;
 const isBrowser = !!globalThis.browser;
+const ua = globalThis?.navigator?.userAgent || "";
+const isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|Edg|OPR/i.test(ua);
 
 /**
  * Convert a callback-style extension API into a Promise.
@@ -103,6 +105,7 @@ const contextMenus = {
 export const platform = {
   api,
   isBrowser,
+  isSafari,
   storage,
   tabs,
   runtime,

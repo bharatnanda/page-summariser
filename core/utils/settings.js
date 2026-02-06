@@ -30,10 +30,14 @@ import { platform } from '../platform.js';
 
 export async function getSettings() {
   const keys = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "blacklistedUrls", "defaultBlacklistedUrls"];
-  const settings = await platform.storage.get('sync', keys);
-  const ua = globalThis?.navigator?.userAgent || "";
-  const isSafari = /Safari/i.test(ua) && !/Chrome|Chromium|Edg|OPR/i.test(ua);
-  const disableStreamingOnSafari = isSafari;
+  let settings = {};
+  try {
+    settings = await platform.storage.get('sync', keys);
+  } catch (error) {
+    console.warn("Sync storage unavailable, falling back to local storage.", error);
+    settings = await platform.storage.get('local', keys);
+  }
+  const disableStreamingOnSafari = platform.isSafari;
 
   const provider = (settings.provider || "openai").toLowerCase();
   const providerSettings = settings.providerSettings || {};
