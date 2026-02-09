@@ -29,6 +29,14 @@
       color: var(--primary);
     }
 
+    h3 {
+      margin: 22px 0 6px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted-text);
+    }
+
     label {
       display: block;
       margin-top: 15px;
@@ -97,13 +105,19 @@
     .button-group button {
       flex: 1;
     }
+
+    .help {
+      margin: 6px 0 0;
+      font-size: 12px;
+      color: var(--muted-text);
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>⚙ Page Summarizer Settings</h2>
 
-    <!-- General Settings -->
+    <h3>Provider</h3>
     <label>Provider:
       <select id="provider">
         <option value="gemini">Gemini</option>
@@ -116,26 +130,37 @@
     <label>API Key:
       <input type="password" id="apiKey" placeholder="Enter API key" />
     </label>
+    <p class="help">Not required for Ollama.</p>
 
-    <!-- Model Specific Fields -->
     <label class="provider-specific" data-show-for="azure ollama">Base URL:
       <input type="text" id="baseUrl" placeholder="e.g. https://your-resource.openai.azure.com or http://localhost:11434" />
     </label>
 
     <label class="provider-specific" data-show-for="azure">Deployment Name:
-      <input type="text" id="deployment" placeholder="e.g. gpt4o-mini" />
+      <input type="text" id="deployment" placeholder="e.g. my-deployment" />
     </label>
+    <p class="help provider-specific" data-show-for="azure">Azure uses deployment name instead of model.</p>
 
     <label class="provider-specific" data-show-for="azure">API Version:
       <input type="text" id="apiVersion" placeholder="e.g. 2024-02-01" />
     </label>
 
-    <!-- Model & Tuning -->
-    <label class="provider-specific" data-show-for="openai gemini ollama">Model Name:
+    <h3>Model</h3>
+    <label class="provider-specific" data-show-for="openai gemini">Model Preset:
+      <select id="modelPreset"></select>
+    </label>
+    <p class="help provider-specific" data-show-for="openai gemini">Choose a preset or type your own model below.</p>
+
+    <label class="provider-specific" data-show-for="azure">Deployment Preset:
+      <select id="deploymentPreset"></select>
+    </label>
+    <p class="help provider-specific" data-show-for="azure">Optional preset for your Azure deployment name.</p>
+
+    <label class="provider-specific" data-show-for="openai gemini ollama">Model:
       <input type="text" id="model" placeholder="e.g. gpt-4o / gemini-pro / llama3" />
     </label>
 
-    <!-- Language -->
+    <h3>Summary Output</h3>
     <label>Summary Language:
       <select id="language">
         <option value="english">🇺🇸 English</option>
@@ -153,7 +178,15 @@
       </select>
     </label>
 
-    <!-- Model Specific Fields -->
+    <label>Prompt Style:
+      <select id="promptProfile">
+        <option value="default">Default (Detailed)</option>
+        <option value="compact">Compact (Small Models)</option>
+      </select>
+    </label>
+    <p class="help">Use Compact for smaller or cheaper models that struggle with complex rules.</p>
+
+    <h3>Content Access</h3>
     <label>Blacklisted URLs:
       <input type="text" id="blacklistedUrls" placeholder="(*.mail.google.com;*.accounts.google.com;*.mail.yahoo.com)" />
     </label>

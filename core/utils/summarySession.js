@@ -108,7 +108,7 @@ async function generateSummary(content, pageURL, options = {}) {
   }
 
   const adjustedContent = clampContentForProvider(content, settings);
-  const prompt = buildSummarizationPrompt(adjustedContent, settings.language);
+  const prompt = buildSummarizationPrompt(adjustedContent, settings.language, settings.promptProfile);
   const summary = onDelta
     ? await fetchSummaryStream(prompt, settings, onDelta)
     : await fetchSummary(prompt, settings);

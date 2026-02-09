@@ -8,7 +8,7 @@ import { platform } from './platform.js';
  * @returns {string}
  */
 function escapeHtml(value) {
-  return value
+  return String(value ?? "")
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

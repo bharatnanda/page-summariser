@@ -19,6 +19,7 @@ import { DEFAULT_BLACKLIST } from './defaultBlacklist.js';
  * @property {string} apiVersion
  * @property {string} model
  * @property {string} language
+ * @property {"default"|"compact"} promptProfile
  * @property {string} blacklistedUrls
  * @property {string} defaultBlacklistedUrls
  * @property {boolean} disableStreamingOnSafari
@@ -30,7 +31,7 @@ import { DEFAULT_BLACKLIST } from './defaultBlacklist.js';
  */
 
 export async function getSettings() {
-  const keys = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "blacklistedUrls", "defaultBlacklistedUrls", "defaultBlacklistInitialized"];
+  const keys = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "promptProfile", "blacklistedUrls", "defaultBlacklistedUrls", "defaultBlacklistInitialized"];
   let settings = {};
   try {
     settings = await platform.storage.get('sync', keys);
@@ -58,6 +59,7 @@ export async function getSettings() {
     apiVersion: (resolved.apiVersion || "").trim(),
     model: (resolved.model || "").trim(),
     language: (settings.language || "").trim(),
+    promptProfile: settings.promptProfile === "compact" ? "compact" : "default",
     blacklistedUrls: (settings.blacklistedUrls || "").trim(),
     defaultBlacklistedUrls: await resolveDefaultBlacklist(settings),
     disableStreamingOnSafari,

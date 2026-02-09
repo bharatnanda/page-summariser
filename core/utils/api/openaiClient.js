@@ -135,16 +135,27 @@ export async function callOpenAIStream(prompt, settings, onDelta) {
   }
 
   let fullText = "";
+  let sawDelta = false;
+  let sawDone = false;
   await readSseStream(res, (event) => {
     if (event?.type === "response.output_text.delta" && typeof event.delta === "string") {
+      sawDelta = true;
       fullText += event.delta;
       onDelta?.(event.delta, fullText);
       return;
     }
     if (event?.type === "response.output_text.done" && typeof event.text === "string") {
+      sawDone = true;
       fullText = event.text;
     }
   });
+
+  if (sawDelta && !sawDone) {
+    console.warn("OpenAI stream ended without output_text.done event.");
+  }
+  if (!sawDelta) {
+    console.warn("OpenAI stream ended without output_text.delta events.");
+  }
 
   return fullText;
 }
