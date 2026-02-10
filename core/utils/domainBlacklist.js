@@ -62,12 +62,6 @@ function compileBlacklist(blacklistString) {
 const blacklistCache = new Map();
 
 /**
- * Check if domain/URL is blacklisted
- * @param {string} blacklistString - semicolon-separated patterns (can include defaults)
- * @param {string} domainOrUrl
- * @returns {boolean}
- */
-/**
  * Check if a hostname or URL matches the blacklist.
  * @param {string} blacklistString
  * @param {string} domainOrUrl
@@ -95,10 +89,6 @@ export function isDomainBlacklisted(blacklistString, domainOrUrl) {
   return compiled.regexList.some((r) => r.test(hostname));
 }
 
-/**
- * Combine default and custom blacklist strings into one semicolon-separated string.
- * Trims and skips empty entries.
- */
 /**
  * Combine default and custom blacklist strings into one semicolon-separated string.
  * @param {string} defaultList

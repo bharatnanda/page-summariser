@@ -16,7 +16,6 @@ const deploymentPresetHint = document.getElementById('deploymentPresetHint');
 const deploymentPresetValue = document.getElementById('deploymentPresetValue');
 const saveButton = document.getElementById('saveBtn');
 const resetButton = document.getElementById('resetBtn');
-const statusMessage = document.getElementById('status');
 const notification = document.getElementById('notification');
 const syncApiKeysCheckbox = document.getElementById('syncApiKeys');
 const useDefaultBlacklistCheckbox = document.getElementById('useDefaultBlacklist');
@@ -274,7 +273,7 @@ function resetForm() {
     syncApiKeysCheckbox.checked = false;
   }
 
-  statusMessage.textContent = "";
+  
   updateProviderFields();
   populateModelPresets("openai");
   if (modelInput) {
@@ -384,7 +383,7 @@ function saveSettings() {
     platform.storage.set('sync', syncWrites),
     platform.storage.set('local', { providerApiKeys: providerApiKeysCache })
   ]).then(() => {
-    statusMessage.textContent = "";
+    
     showNotification(notification, "Settings saved!", "success");
   }).catch((error) => {
     console.error("Failed to save settings:", error);

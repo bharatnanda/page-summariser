@@ -39,6 +39,7 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
 - **API Key Required**: Yes
 - **Default Model**: gpt-4o-mini
 - **Base URL**: https://api.openai.com/v1 (also accepts full endpoint URLs)
+- **API**: Uses the OpenAI Responses API for both streaming and non-streaming requests
 
 ### Google Gemini
 - **API Key Required**: Yes
@@ -85,6 +86,10 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
 - **Model Name**: Specify which model to use
 - **Provider-Scoped Storage**: Each provider keeps its own saved credentials and model settings
 
+### API Key Storage
+- API keys are stored locally by default
+- You can opt in to sync keys across devices with the “Sync API keys across devices” toggle
+
 ### Provider-Specific Settings
 - **Azure OpenAI**: Requires Deployment Name and API Version
 - **Ollama**: Can run entirely locally without an API key
@@ -109,7 +114,8 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
 ### Domain Blacklisting
 - Prevent summarization on specific domains
 - Use semicolon-separated list with wildcards (e.g., `*.mail.google.com;*.accounts.google.com`)
-- See [Default Blacklisted Domains](#default-blacklisted-domains) for the comprehensive list of domains blacklisted by default
+- Enable “Include recommended defaults” in Settings to use the built-in list
+- Click “Show defaults” to preview the list (read-only)
 
 ### Default Blacklisted Domains
 The extension comes with a comprehensive list of default blacklisted domains for security and privacy reasons:
@@ -198,6 +204,12 @@ Open the generated Xcode project in `safari-app/`, enable the extension, and bui
 
 ```
 npm run clean
+```
+
+#### Build all platforms
+
+```
+npm run build:all
 ```
 
 #### Run tests

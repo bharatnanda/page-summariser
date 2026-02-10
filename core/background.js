@@ -21,12 +21,8 @@ function createStreamId() {
  * @param {string} streamId
  */
 function registerStream(streamId) {
-  let readyResolve;
-  const ready = new Promise((resolve) => {
-    readyResolve = resolve;
-  });
   const controller = new AbortController();
-  activeStreams.set(streamId, { port: null, buffer: [], ready, readyResolve, controller });
+  activeStreams.set(streamId, { port: null, buffer: [], controller });
 }
 
 /**
@@ -95,10 +91,6 @@ async function showInPageToast(message, type = "info") {
   }
 }
 
-async function notifyToast(message, type = "info") {
-  await showInPageToast(message, type);
-}
-
 platform.runtime.onConnect.addListener((port) => {
   if (!port.name.startsWith("summaryStream:")) return;
   const streamId = port.name.slice("summaryStream:".length);
@@ -109,10 +101,6 @@ platform.runtime.onConnect.addListener((port) => {
     return;
   }
   stream.port = port;
-  if (stream.readyResolve) {
-    stream.readyResolve();
-    stream.readyResolve = null;
-  }
   if (stream.buffer.length) {
     for (const message of stream.buffer) {
       port.postMessage(message);
@@ -183,7 +171,7 @@ platform.contextMenus.onClicked.addListener(async (info, tab) => {
       });
     }).catch(err => {
       console.error("Failed to summarize page:", err);
-      notifyToast(err.message || 'Failed to summarize this page. Please try again or use the popup instead.', 'error');
+      showInPageToast(err.message || 'Failed to summarize this page. Please try again or use the popup instead.', 'error');
     });
   }
 });
@@ -241,7 +229,7 @@ async function startSummaryStream({ content, pageURL, title, incrementCounter, c
       });
     } catch (err) {
       console.error("Summarize error:", err);
-      await notifyToast(err.message || 'Failed to summarize this page. Please try again.', 'error');
+      await showInPageToast(err.message || 'Failed to summarize this page. Please try again.', 'error');
     }
     return null;
   }
@@ -280,7 +268,7 @@ async function startSummaryStream({ content, pageURL, title, incrementCounter, c
       type: "error",
       message: err.message || "Failed to summarize this page."
     });
-    await notifyToast(err.message || 'Failed to summarize this page. Please try again.', 'error');
+    await showInPageToast(err.message || 'Failed to summarize this page. Please try again.', 'error');
   } finally {
     setTimeout(() => cleanupStream(streamId), 30000);
   }
