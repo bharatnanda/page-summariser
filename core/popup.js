@@ -1,5 +1,4 @@
 import { getPageContent } from './utils/contentExtractor.js';
-import { saveSummaryForView } from './utils/summaryStore.js';
 import { showNotification } from './utils/notification.js';
 import { platform } from './platform.js';
 

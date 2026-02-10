@@ -299,11 +299,3 @@ function extractSource(summary) {
 
   return sourceUrl;
 }
-
-
-
-/**
- * Show a transient notification.
- * @param {string} message
- * @param {"success"|"error"} type
- */

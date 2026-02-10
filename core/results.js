@@ -165,12 +165,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     platform.tabs.create({ url: platform.runtime.getURL('history.html') });
   });
 
-  // Show notification function
-  /**
-   * Show a transient notification.
-   * @param {string} message
-   * @param {"success"|"error"} type
-   */
   /**
    * Render article metadata.
    * @param {{ title?: string, sourceUrl?: string, provider?: string, model?: string }} meta
