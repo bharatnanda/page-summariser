@@ -31,18 +31,19 @@ function resolveOpenAIUrl(baseUrl, path) {
 }
 
 /**
- * Call OpenAI chat completions (non-streaming).
+ * Call OpenAI Responses API (non-streaming).
  * @param {string} prompt
  * @param {{ apiKey: string, baseUrl?: string, model?: string }} settings
+ * @param {AbortSignal} [signal]
  * @returns {Promise<string>}
  */
-export async function callOpenAI(prompt, settings) {
+export async function callOpenAI(prompt, settings, signal) {
   const { apiKey, baseUrl, model } = settings;
-  const url = baseUrl || "https://api.openai.com/v1/chat/completions";
+  const url = resolveOpenAIUrl(baseUrl, "responses");
   const resolvedModel = model || "gpt-4o-mini";
   const requestBody = {
     model: resolvedModel,
-    messages: [{ role: "user", content: prompt }]
+    input: prompt
   };
 
   if (!apiKey) {
@@ -55,7 +56,8 @@ export async function callOpenAI(prompt, settings) {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`
     },
-    body: JSON.stringify(requestBody)
+    body: JSON.stringify(requestBody),
+    signal
   });
 
   const data = await res.json();
@@ -83,9 +85,10 @@ export async function callOpenAI(prompt, settings) {
  * @param {string} prompt
  * @param {{ apiKey: string, baseUrl?: string, model?: string }} settings
  * @param {(delta: string, fullText: string) => void} onDelta
+ * @param {AbortSignal} [signal]
  * @returns {Promise<string>}
  */
-export async function callOpenAIStream(prompt, settings, onDelta) {
+export async function callOpenAIStream(prompt, settings, onDelta, signal) {
   const { apiKey, baseUrl, model } = settings;
   const url = resolveOpenAIUrl(baseUrl, "responses");
   const resolvedModel = model || "gpt-4o-mini";
@@ -105,7 +108,8 @@ export async function callOpenAIStream(prompt, settings, onDelta) {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`
     },
-    body: JSON.stringify(requestBody)
+    body: JSON.stringify(requestBody),
+    signal
   });
 
   if (!res.ok) {
@@ -135,16 +139,27 @@ export async function callOpenAIStream(prompt, settings, onDelta) {
   }
 
   let fullText = "";
+  let sawDelta = false;
+  let sawDone = false;
   await readSseStream(res, (event) => {
     if (event?.type === "response.output_text.delta" && typeof event.delta === "string") {
+      sawDelta = true;
       fullText += event.delta;
       onDelta?.(event.delta, fullText);
       return;
     }
     if (event?.type === "response.output_text.done" && typeof event.text === "string") {
+      sawDone = true;
       fullText = event.text;
     }
   });
+
+  if (sawDelta && !sawDone) {
+    console.warn("OpenAI stream ended without output_text.done event.");
+  }
+  if (!sawDelta) {
+    console.warn("OpenAI stream ended without output_text.delta events.");
+  }
 
   return fullText;
 }

@@ -25,7 +25,7 @@ export function clampContentForProvider(content, settings) {
  * @param {string} language
  * @returns {string}
  */
-export function buildSummarizationPrompt(content, language = "english") {
+function buildDefaultPrompt(content, language) {
   return `
 You are a professional summarizer.  
 Read the webpage content provided below and produce a clear, concise summary in ${language}.
@@ -74,6 +74,12 @@ First infer the page type and summarize accordingly:
 - Extract only the most important insights; avoid exhaustive detail.
 - Prioritize the primary purpose and the most impactful points.
 
+## Output Rules (Strict)
+- Use bullet points ('-') by default; only use a table when the rules above allow it.
+- Do not include headings, section titles, or labels (e.g., “Summary”, “Key Entities”, “Overall”).
+- Do not include any preamble or closing remarks.
+- Do not include any follow-up questions, offers to help, or requests for more input.
+
 Output only the summary.
 
 ---
@@ -81,4 +87,34 @@ Output only the summary.
 **Page Content:**
 ${content}
 `;
+}
+
+function buildCompactPrompt(content, language) {
+  return `
+Summarize the webpage content below in ${language}.
+
+Rules:
+- Max 180 words.
+- Output only bullet points starting with '-'.
+- No headings, labels, preambles, or closing remarks.
+- No follow-up questions or offers to help.
+- Focus on the core facts, intent, and any critical numbers or dates.
+
+Page Content:
+${content}
+`;
+}
+
+/**
+ * Build the summarization prompt for the LLM.
+ * @param {string} content
+ * @param {string} language
+ * @param {"default"|"compact"} promptProfile
+ * @returns {string}
+ */
+export function buildSummarizationPrompt(content, language = "english", promptProfile = "default") {
+  if (promptProfile === "compact") {
+    return buildCompactPrompt(content, language);
+  }
+  return buildDefaultPrompt(content, language);
 }

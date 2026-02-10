@@ -19,6 +19,8 @@ import { DEFAULT_BLACKLIST } from './defaultBlacklist.js';
  * @property {string} apiVersion
  * @property {string} model
  * @property {string} language
+ * @property {"default"|"compact"} promptProfile
+ * @property {boolean} useExtractionEngine
  * @property {string} blacklistedUrls
  * @property {string} defaultBlacklistedUrls
  * @property {boolean} disableStreamingOnSafari
@@ -30,18 +32,28 @@ import { DEFAULT_BLACKLIST } from './defaultBlacklist.js';
  */
 
 export async function getSettings() {
-  const keys = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "blacklistedUrls", "defaultBlacklistedUrls", "defaultBlacklistInitialized"];
+  const keys = ["provider", "providerSettings", "providerApiKeys", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "promptProfile", "useExtractionEngine", "blacklistedUrls", "defaultBlacklistedUrls", "defaultBlacklistInitialized", "syncApiKeys"];
   let settings = {};
+  let localSettings = {};
   try {
-    settings = await platform.storage.get('sync', keys);
+    const [syncValues, localValues] = await Promise.all([
+      platform.storage.get('sync', keys),
+      platform.storage.get('local', ['providerApiKeys', 'apiKey'])
+    ]);
+    settings = syncValues || {};
+    localSettings = localValues || {};
   } catch (error) {
     console.warn("Sync storage unavailable, falling back to local storage.", error);
     settings = await platform.storage.get('local', keys);
+    localSettings = settings;
   }
   const disableStreamingOnSafari = platform.isSafari;
 
   const provider = (settings.provider || "openai").toLowerCase();
   const providerSettings = settings.providerSettings || {};
+  const providerApiKeysLocal = localSettings.providerApiKeys || {};
+  const providerApiKeysSync = settings.providerApiKeys || {};
+  const syncApiKeys = Boolean(settings.syncApiKeys);
   const resolved = providerSettings[provider] || {
     apiKey: settings.apiKey || "",
     baseUrl: settings.baseUrl || "",
@@ -52,12 +64,14 @@ export async function getSettings() {
 
   return {
     provider,
-    apiKey: (resolved.apiKey || "").trim(),
+    apiKey: (providerApiKeysLocal[provider] || (syncApiKeys ? (providerApiKeysSync[provider] || resolved.apiKey || "") : "") || "").trim(),
     baseUrl: (resolved.baseUrl || "").trim(),
     deployment: (resolved.deployment || "").trim(),
     apiVersion: (resolved.apiVersion || "").trim(),
     model: (resolved.model || "").trim(),
     language: (settings.language || "").trim(),
+    promptProfile: settings.promptProfile === "compact" ? "compact" : "default",
+    useExtractionEngine: Boolean(settings.useExtractionEngine),
     blacklistedUrls: (settings.blacklistedUrls || "").trim(),
     defaultBlacklistedUrls: await resolveDefaultBlacklist(settings),
     disableStreamingOnSafari,

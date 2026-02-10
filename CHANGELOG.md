@@ -16,3 +16,7 @@
 - Prompt guidelines updated with adaptive length targeting and a 250‑word cap.  
 - Toast‑based error handling and notifications added for consistent UX.  
 - Updated README with multi‑platform build and install instructions.
+- Reorganized settings UI and separated advanced settings for clarity.
+- Added heuristic-based content extraction to better capture main page content.
+- Added default model presets per provider and introduced compact/default prompt profiles.
+- Updated the evaluation dataset (eval_set.csv).

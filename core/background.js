@@ -25,7 +25,8 @@ function registerStream(streamId) {
   const ready = new Promise((resolve) => {
     readyResolve = resolve;
   });
-  activeStreams.set(streamId, { port: null, buffer: [], ready, readyResolve });
+  const controller = new AbortController();
+  activeStreams.set(streamId, { port: null, buffer: [], ready, readyResolve, controller });
 }
 
 /**
@@ -35,6 +36,9 @@ function registerStream(streamId) {
 function cleanupStream(streamId) {
   const stream = activeStreams.get(streamId);
   if (!stream) return;
+  if (stream.controller && !stream.controller.signal.aborted) {
+    stream.controller.abort();
+  }
   if (stream.port) {
     try {
       stream.port.disconnect();
@@ -58,21 +62,6 @@ function sendStreamMessage(streamId, message) {
   } else {
     stream.buffer.push(message);
   }
-}
-
-/**
- * Wait for a stream port to connect or timeout.
- * @param {string} streamId
- * @param {number} timeoutMs
- * @returns {Promise<void>}
- */
-function waitForStreamReady(streamId, timeoutMs = 2000) {
-  const stream = activeStreams.get(streamId);
-  if (!stream?.ready) return Promise.resolve();
-  return Promise.race([
-    stream.ready,
-    new Promise(resolve => setTimeout(resolve, timeoutMs))
-  ]);
 }
 
 async function showInPageToast(message, type = "info") {
@@ -133,6 +122,9 @@ platform.runtime.onConnect.addListener((port) => {
   port.onDisconnect.addListener(() => {
     if (stream.port === port) {
       stream.port = null;
+      if (stream.controller && !stream.controller.signal.aborted) {
+        stream.controller.abort();
+      }
     }
   });
 });
@@ -165,11 +157,13 @@ platform.runtime.onInstalled.addListener(async () => {
 });
 
 // When menu item is clicked, extract text from the active tab
-platform.contextMenus.onClicked.addListener((info, tab) => {
+platform.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "summarizePage") {
+    const settings = await getSettings();
     platform.scripting.executeScript({
       target: { tabId: tab.id },
-      func: extractPageData
+      func: extractPageData,
+      args: [Boolean(settings.useExtractionEngine)]
     }).then(async (results) => {
       const result = results?.[0]?.result;
       const pageURL = tab.url || '';
@@ -254,9 +248,9 @@ async function startSummaryStream({ content, pageURL, title, incrementCounter, c
 
   const streamId = createStreamId();
   registerStream(streamId);
+  const stream = activeStreams.get(streamId);
 
   try {
-    await waitForStreamReady(streamId);
     const result = await summarySession.runStreaming({
       content,
       pageURL,
@@ -264,6 +258,7 @@ async function startSummaryStream({ content, pageURL, title, incrementCounter, c
       incrementCounter,
       cacheKey: resolvedCacheKey,
       streamId,
+      signal: stream?.controller?.signal,
       onDelta: (delta) => {
         sendStreamMessage(streamId, { type: "delta", delta });
       }
@@ -277,6 +272,9 @@ async function startSummaryStream({ content, pageURL, title, incrementCounter, c
       sourceUrl: pageURL
     });
   } catch (err) {
+    if (err?.name === "AbortError" || /aborted/i.test(err?.message || "")) {
+      return null;
+    }
     console.error("Summarize error:", err);
     sendStreamMessage(streamId, {
       type: "error",

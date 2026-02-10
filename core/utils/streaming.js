@@ -13,6 +13,7 @@ export async function readSseStream(response, onEvent) {
   const decoder = new TextDecoder();
   let buffer = "";
   let dataLines = [];
+  let eventCount = 0;
 
   while (true) {
     const { value, done } = await reader.read();
@@ -36,6 +37,7 @@ export async function readSseStream(response, onEvent) {
           continue;
         }
 
+        eventCount += 1;
         onEvent?.(parsed);
         continue;
       }
@@ -46,14 +48,31 @@ export async function readSseStream(response, onEvent) {
     }
   }
 
-  const remaining = `${buffer}\n${dataLines.join("\n")}`.trim();
-  if (remaining && remaining !== "[DONE]") {
+  if (buffer) {
+    if (buffer.startsWith("data:")) {
+      dataLines.push(buffer.slice(5).trimStart());
+    } else {
+      const extracted = extractSseData(buffer);
+      if (extracted) {
+        dataLines.push(extracted);
+      }
+    }
+  }
+
+  const tail = dataLines.join("\n").trim();
+  if (tail) {
+    if (tail === "[DONE]") return;
     try {
-      const parsed = JSON.parse(remaining);
+      const parsed = JSON.parse(tail);
+      eventCount += 1;
       onEvent?.(parsed);
     } catch (error) {
       // Ignore trailing parse errors.
     }
+  }
+
+  if (eventCount === 0) {
+    console.warn("SSE stream ended without any events.");
   }
 }
 
@@ -71,6 +90,7 @@ export async function readNdjsonStream(response, onEvent) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let eventCount = 0;
 
   while (true) {
     const { value, done } = await reader.read();
@@ -91,6 +111,7 @@ export async function readNdjsonStream(response, onEvent) {
         continue;
       }
 
+      eventCount += 1;
       onEvent?.(parsed);
     }
   }
@@ -99,10 +120,15 @@ export async function readNdjsonStream(response, onEvent) {
   if (remaining) {
     try {
       const parsed = JSON.parse(remaining);
+      eventCount += 1;
       onEvent?.(parsed);
     } catch (error) {
       // Ignore trailing parse errors.
     }
+  }
+
+  if (eventCount === 0) {
+    console.warn("NDJSON stream ended without any events.");
   }
 }
 

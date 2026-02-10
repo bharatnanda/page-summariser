@@ -83,11 +83,11 @@ async function saveToHistory(url, summary, title, meta = {}) {
  * Generate a summary from content with provider settings.
  * @param {string} content
  * @param {string} pageURL
- * @param {{ onDelta?: (delta: string) => void, title?: string }} options
+ * @param {{ onDelta?: (delta: string) => void, title?: string, signal?: AbortSignal }} options
  * @returns {Promise<{ summary: string, settings: import('./settings.js').Settings }>}
  */
 async function generateSummary(content, pageURL, options = {}) {
-  const { onDelta } = options;
+  const { onDelta, signal } = options;
   const settings = await getSettings();
 
   const combinedBlacklist = combineBlacklists(
@@ -108,10 +108,10 @@ async function generateSummary(content, pageURL, options = {}) {
   }
 
   const adjustedContent = clampContentForProvider(content, settings);
-  const prompt = buildSummarizationPrompt(adjustedContent, settings.language);
+  const prompt = buildSummarizationPrompt(adjustedContent, settings.language, settings.promptProfile);
   const summary = onDelta
-    ? await fetchSummaryStream(prompt, settings, onDelta)
-    : await fetchSummary(prompt, settings);
+    ? await fetchSummaryStream(prompt, settings, onDelta, signal)
+    : await fetchSummary(prompt, settings, signal);
 
   if (!summary || summary.trim().length === 0) {
     throw new Error("The AI model failed to generate a summary. Please try again later.");
@@ -119,7 +119,7 @@ async function generateSummary(content, pageURL, options = {}) {
 
   await saveToHistory(pageURL, summary, options.title || "", {
     provider: settings.provider,
-    model: settings.model
+    model: settings.provider === "azure" ? settings.deployment : settings.model
   });
   return { summary, settings };
 }
@@ -182,7 +182,7 @@ export const summarySession = {
         title,
         sourceUrl: pageURL,
         provider: settings.provider,
-        model: settings.model
+        model: settings.provider === "azure" ? settings.deployment : settings.model
       });
     }
 
@@ -194,27 +194,27 @@ export const summarySession = {
       title,
       sourceUrl: pageURL,
       provider: settings.provider,
-      model: settings.model
+      model: settings.provider === "azure" ? settings.deployment : settings.model
     });
     return { summary, summaryId };
   },
 
   /**
    * Run a streaming summary session and open a streaming results page.
-   * @param {{ content: string, pageURL: string, title: string, incrementCounter: boolean, cacheKey: string | null, streamId: string, onDelta: (delta: string) => void }} args
+   * @param {{ content: string, pageURL: string, title: string, incrementCounter: boolean, cacheKey: string | null, streamId: string, onDelta: (delta: string) => void, signal?: AbortSignal }} args
    * @returns {Promise<SummarySessionResult>}
    */
-  async runStreaming({ content, pageURL, title, incrementCounter, cacheKey, streamId, onDelta }) {
+  async runStreaming({ content, pageURL, title, incrementCounter, cacheKey, streamId, onDelta, signal }) {
     openResultsPage({ streamId });
 
-    const { summary, settings } = await generateSummary(content, pageURL, { title, onDelta });
+    const { summary, settings } = await generateSummary(content, pageURL, { title, onDelta, signal });
 
     if (cacheKey) {
       await cacheSummary(cacheKey, summary, {
         title,
         sourceUrl: pageURL,
         provider: settings.provider,
-        model: settings.model
+        model: settings.provider === "azure" ? settings.deployment : settings.model
       });
     }
 
@@ -228,7 +228,7 @@ export const summarySession = {
         title,
         sourceUrl: pageURL,
         provider: settings.provider,
-        model: settings.model
+        model: settings.provider === "azure" ? settings.deployment : settings.model
       });
     } catch (error) {
       // Ignore summary store errors.

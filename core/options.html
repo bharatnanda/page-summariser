@@ -16,7 +16,8 @@
     .container {
       background-color: var(--surface);
       padding: 30px 25px;
-      width: 400px;
+      width: 460px;
+      max-width: 94vw;
       border-radius: 10px;
       box-shadow: var(--card-shadow);
       border: 1px solid var(--border);
@@ -27,6 +28,14 @@
       margin-bottom: 20px;
       text-align: center;
       color: var(--primary);
+    }
+
+    h3 {
+      margin: 24px 0 8px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted-text);
     }
 
     label {
@@ -78,6 +87,20 @@
       background-color: var(--primary-dark);
     }
 
+    .ghost-btn {
+      margin-top: 10px;
+      width: auto;
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    .ghost-btn:hover {
+      background: rgba(0,0,0,0.03);
+    }
+
     #status {
       margin-top: 15px;
       color: var(--success);
@@ -97,13 +120,75 @@
     .button-group button {
       flex: 1;
     }
+
+    details {
+      margin-top: 20px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: var(--surface);
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--dark-text);
+      outline: none;
+      list-style: none;
+    }
+    summary::-webkit-details-marker {
+      display: none;
+    }
+    summary::after {
+      content: "▾";
+      float: right;
+      color: var(--muted-text);
+      transition: transform 0.2s ease;
+    }
+    details[open] summary::after {
+      transform: rotate(180deg);
+    }
+
+    .advanced-body {
+      margin-top: 12px;
+    }
+
+    .section-divider {
+      margin: 18px 0 6px;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .help {
+      margin: 6px 0 0;
+      font-size: 12px;
+      color: var(--muted-text);
+    }
+
+    .inline-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .inline-toggle input {
+      width: auto;
+      margin-top: 0;
+    }
+
+    .preset-hint {
+      font-size: 12px;
+      color: var(--muted-text);
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>⚙ Page Summarizer Settings</h2>
 
-    <!-- General Settings -->
+    <h3>Provider</h3>
     <label>Provider:
       <select id="provider">
         <option value="gemini">Gemini</option>
@@ -116,26 +201,38 @@
     <label>API Key:
       <input type="password" id="apiKey" placeholder="Enter API key" />
     </label>
+    
+    <h3>Model</h3>
+    <label class="provider-specific" data-show-for="openai gemini">Model Preset:
+      <select id="modelPreset"></select>
+    </label>
+    <p class="help provider-specific" data-show-for="openai gemini">Choose a preset or pick Custom to enter a model.</p>
 
-    <!-- Model Specific Fields -->
+    <label class="provider-specific" data-show-for="azure">Deployment Preset:
+      <select id="deploymentPreset"></select>
+    </label>
+    <p class="help provider-specific" data-show-for="azure">Optional preset for your Azure deployment name.</p>
+
+    <label class="provider-specific" data-show-for="openai gemini ollama" id="modelInputRow">Model:
+      <input type="text" id="model" placeholder="" />
+      <div class="preset-hint" id="modelPresetHint" hidden>Using preset: <span id="modelPresetValue"></span></div>
+    </label>
+
     <label class="provider-specific" data-show-for="azure ollama">Base URL:
       <input type="text" id="baseUrl" placeholder="e.g. https://your-resource.openai.azure.com or http://localhost:11434" />
     </label>
 
-    <label class="provider-specific" data-show-for="azure">Deployment Name:
-      <input type="text" id="deployment" placeholder="e.g. gpt4o-mini" />
+    <label class="provider-specific" data-show-for="azure" id="deploymentInputRow">Deployment Name:
+      <input type="text" id="deployment" placeholder="e.g. my-deployment" />
+      <div class="preset-hint" id="deploymentPresetHint" hidden>Using preset: <span id="deploymentPresetValue"></span></div>
     </label>
+    <p class="help provider-specific" data-show-for="azure">Azure uses deployment name instead of model.</p>
 
     <label class="provider-specific" data-show-for="azure">API Version:
       <input type="text" id="apiVersion" placeholder="e.g. 2024-02-01" />
     </label>
 
-    <!-- Model & Tuning -->
-    <label class="provider-specific" data-show-for="openai gemini ollama">Model Name:
-      <input type="text" id="model" placeholder="e.g. gpt-4o / gemini-pro / llama3" />
-    </label>
-
-    <!-- Language -->
+    <h3>Summary Output</h3>
     <label>Summary Language:
       <select id="language">
         <option value="english">🇺🇸 English</option>
@@ -153,14 +250,45 @@
       </select>
     </label>
 
-    <!-- Model Specific Fields -->
-    <label>Blacklisted URLs:
-      <input type="text" id="blacklistedUrls" placeholder="(*.mail.google.com;*.accounts.google.com;*.mail.yahoo.com)" />
+    <label>Prompt Style:
+      <select id="promptProfile">
+        <option value="default">Default (Detailed)</option>
+        <option value="compact">Compact (Small Models)</option>
+      </select>
     </label>
+    <p class="help">Use Compact for smaller or cheaper models that struggle with complex rules.</p>
+    
+    <details id="advancedSettings">
+      <summary>Advanced settings</summary>
+      <div class="advanced-body">
+        <div class="section-divider"></div>
+        <label class="inline-toggle">
+          <input type="checkbox" id="syncApiKeys" />
+          Sync API keys across devices
+        </label>
+        <p class="help">Off by default for security. When enabled, keys are stored in sync storage.</p>
 
-    <label>Default Blacklisted URLs:
-      <textarea id="defaultBlacklistedUrls" rows="10" cols="100"></textarea>
-    </label>
+        <h3>Extraction</h3>
+        <label>Extraction Mode:
+          <select id="useExtractionEngine">
+            <option value="true">Smart Extraction (Beta)</option>
+            <option value="false">Basic innerText</option>
+          </select>
+        </label>
+        <p class="help">Smart Extraction is more accurate but may be slower on heavy pages.</p>
+
+        <h3>Content Access</h3>
+        <label>Blocked Sites:
+          <input type="text" id="blacklistedUrls" placeholder="(*.mail.google.com;*.accounts.google.com;*.mail.yahoo.com)" />
+        </label>
+        <label class="inline-toggle">
+          <input type="checkbox" id="useDefaultBlacklist" />
+          Include recommended defaults
+        </label>
+        <button type="button" id="toggleDefaultBlacklist" class="ghost-btn">Show defaults</button>
+        <textarea id="defaultBlacklistedUrls" rows="8" cols="100" hidden readonly></textarea>
+      </div>
+    </details>
 
     
     <div class="button-group">
@@ -169,6 +297,7 @@
     </div>
 
     <p id="status"></p>
+    <div id="notification"></div>
   </div>
 
   <script type="module" src="options.js"></script>
