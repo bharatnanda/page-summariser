@@ -136,6 +136,7 @@ function resetForm() {
   applyProviderSettingsToForm({});
   document.getElementById("language").value = "english";
   document.getElementById("promptProfile").value = "default";
+  document.getElementById("useExtractionEngine").value = "true";
   document.getElementById("blacklistedUrls").value = "";
 
   statusMessage.textContent = "";
@@ -156,7 +157,7 @@ function resetForm() {
  * Loads saved settings from chrome.storage.sync and populates the form fields.
  */
 function loadSettings() {
-  const fields = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "promptProfile", "blacklistedUrls", "defaultBlacklistedUrls"];
+  const fields = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "promptProfile", "useExtractionEngine", "blacklistedUrls", "defaultBlacklistedUrls"];
   platform.storage.get('sync', fields).then((items) => {
     if (items.provider) document.getElementById("provider").value = items.provider;
     const providerKey = (items.provider || "openai").toLowerCase();
@@ -181,6 +182,9 @@ function loadSettings() {
     }
     if (items.language) document.getElementById("language").value = items.language;
     if (items.promptProfile) document.getElementById("promptProfile").value = items.promptProfile;
+    if (items.useExtractionEngine !== undefined) {
+      document.getElementById("useExtractionEngine").value = String(Boolean(items.useExtractionEngine));
+    }
     if (items.blacklistedUrls !== undefined) document.getElementById("blacklistedUrls").value = items.blacklistedUrls;
     if (items.defaultBlacklistedUrls !== undefined) document.getElementById("defaultBlacklistedUrls").value = items.defaultBlacklistedUrls;
     updateProviderFields();
@@ -202,6 +206,7 @@ function saveSettings() {
     provider: providerSelect.value,
     language: document.getElementById("language").value.trim(),
     promptProfile: document.getElementById("promptProfile").value,
+    useExtractionEngine: document.getElementById("useExtractionEngine").value === "true",
     blacklistedUrls: document.getElementById("blacklistedUrls").value.trim(),
     defaultBlacklistedUrls: document.getElementById("defaultBlacklistedUrls").value.trim()
   };

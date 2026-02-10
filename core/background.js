@@ -165,11 +165,13 @@ platform.runtime.onInstalled.addListener(async () => {
 });
 
 // When menu item is clicked, extract text from the active tab
-platform.contextMenus.onClicked.addListener((info, tab) => {
+platform.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "summarizePage") {
+    const settings = await getSettings();
     platform.scripting.executeScript({
       target: { tabId: tab.id },
-      func: extractPageData
+      func: extractPageData,
+      args: [Boolean(settings.useExtractionEngine)]
     }).then(async (results) => {
       const result = results?.[0]?.result;
       const pageURL = tab.url || '';

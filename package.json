@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/domainBlacklist.test.js && node tests/cache.test.js && node tests/historyStore.test.js && node tests/promptBuilder.test.js && node tests/summarySession.test.js",
+    "test": "node tests/domainBlacklist.test.js && node tests/cache.test.js && node tests/historyStore.test.js && node tests/promptBuilder.test.js && node tests/summarySession.test.js && node tests/contentExtractor.test.js",
     "build:chrome": "node build/build.js chrome",
     "build:firefox": "node build/build.js firefox",
     "build:safari": "node build/build.js safari",

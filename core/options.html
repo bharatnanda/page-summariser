@@ -186,6 +186,14 @@
     </label>
     <p class="help">Use Compact for smaller or cheaper models that struggle with complex rules.</p>
 
+    <label>Extraction Mode:
+      <select id="useExtractionEngine">
+        <option value="true">Smart Extraction (Beta)</option>
+        <option value="false">Basic innerText</option>
+      </select>
+    </label>
+    <p class="help">Smart Extraction is more accurate but may be slower on heavy pages.</p>
+
     <h3>Content Access</h3>
     <label>Blacklisted URLs:
       <input type="text" id="blacklistedUrls" placeholder="(*.mail.google.com;*.accounts.google.com;*.mail.yahoo.com)" />
