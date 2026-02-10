@@ -76,3 +76,23 @@ id,page_title,model,source_type,key_facts,summary,accuracy,coverage,conciseness,
     - web-design-guidelines by vercel-labs/agent-skills with 84.2K installs
     - Various other skills with different install numbers from 53.8K to 7.8K
 - Various skills available for different agents to enhance their capabilities",2.0,2.0,1.5,1.0,6.5,Mostly accurate. Format violates no-nested-bullets rule; could summarize top 3 without sub-bullets. Coverage ok for leaderboard; counts are correct for top entries shown.
+7,OpenAI Partner Bootcamp Immersion,gemini-2.5-flash,program/landing,"- Program for solution architects, ML engineers, instructors
+- 8 tracks, 14 labs, 3 capstones
+- Outcomes: prompts with safety/eval gates, hybrid RAG, eval release gates/telemetry, Agents SDK+AgentKit, multimodal/realtime, Codex, Apps SDK
+- Flow: kickoff/setup, learning sprints, eval gates, capstone assembly
+- Tracks include Prompt Engineering, Solution Blueprints, Agents & Tooling, AgentKit, Evals, Multimodality, Codex, Apps SDK
+- Capstones: Field Intelligence Copilot; Autonomous Builder Control Tower
+- Resources: repos, docs/courses, facilitation notes","The **OpenAI Partner Bootcamp Immersion** is an intensive program designed for **solution architects**, **ML engineers**, and **instructors** running OpenAI Immersion Days.
+
+Key aspects of the program include:
+- **Structure**: It features **eight immersive tracks**, **fourteen labs**, and **three high-touch capstones**, guiding participants from prompt engineering to multimodal agents with production-grade playbooks.
+- **Program Outcomes**:
+    - Shipping production-ready prompts with safety and evaluation gates.
+    - Standing up hybrid **RAG** (Retrieval Augmented Generation) with orchestration and citations.
+    - Running eval-driven release gates and telemetry loops.
+    - Orchestrating **Agents SDK** + **AgentKit** workflows.
+    - Building multimodal/realtime voice experiences, **Codex**-assisted flows, and **Apps SDK** chat applications.
+- **Flow**: The program involves kickoff and setup, learning sprints with 30-minute primers and 60-minute labs, **eval gates** that drive pass/fail criteria, and capstone assembly.
+- **Tracks**: Topics include **Prompt Engineering**, **Solution Blueprints**, **Agents & Tooling**, **AgentKit Systems**, **Evals & Benchmarking**, **Multimodality & Realtime**, **Codex & Agentic Dev UX**, and **Apps SDK Bootcamp**.
+- **Capstones**: Participants blend learned tracks into final projects like ""Field Intelligence Copilot"" or ""Autonomous Builder Control Tower"".
+- **Resources**: Bootcamp materials include source repositories, facilitator guides, **OpenAI Docs & Courses**, and immersion day notes.",2.5,2.5,1.5,0.5,7.0,"Accurate and comprehensive, but violates format rules: preamble, headings, and nested bullets; not bullet-only. Could be shorter."
