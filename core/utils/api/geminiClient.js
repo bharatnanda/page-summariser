@@ -42,9 +42,10 @@ function resolveGeminiUrl(baseUrl, model, stream) {
  * Call Gemini generateContent (non-streaming).
  * @param {string} prompt
  * @param {{ apiKey: string, baseUrl?: string, model?: string }} settings
+ * @param {AbortSignal} [signal]
  * @returns {Promise<string>}
  */
-export async function callGemini(prompt, settings) {
+export async function callGemini(prompt, settings, signal) {
   const { apiKey, baseUrl, model } = settings;
   const geminiModel = model || "gemini-2.5-flash";
 
@@ -62,7 +63,8 @@ export async function callGemini(prompt, settings) {
     },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }]
-    })
+    }),
+    signal
   });
 
   const data = await res.json();
@@ -90,9 +92,10 @@ export async function callGemini(prompt, settings) {
  * @param {string} prompt
  * @param {{ apiKey: string, baseUrl?: string, model?: string }} settings
  * @param {(delta: string, fullText: string) => void} onDelta
+ * @param {AbortSignal} [signal]
  * @returns {Promise<string>}
  */
-export async function callGeminiStream(prompt, settings, onDelta) {
+export async function callGeminiStream(prompt, settings, onDelta, signal) {
   const { apiKey, baseUrl, model } = settings;
   const geminiModel = model || "gemini-2.5-flash";
 
@@ -113,7 +116,8 @@ export async function callGeminiStream(prompt, settings, onDelta) {
     },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }]
-    })
+    }),
+    signal
   });
 
   if (!res.ok) {

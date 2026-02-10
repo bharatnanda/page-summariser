@@ -147,6 +147,8 @@ export function extractPageData(useExtractionEngine = true) {
       const centerX = r.left + r.width / 2;
       const distToCenter = Math.abs(centerX - vw / 2);
       const centerBoost = Math.max(0, 1200 - distToCenter) * 0.6;
+      const top = Math.max(0, r.top || 0);
+      const topBoost = Math.max(0, 1400 - top) * 0.7;
       const widthBoost = Math.min(r.width, 1200) * 2.0;
       const p = el.querySelectorAll("p").length;
       const h = el.querySelectorAll("h1,h2,h3,h4").length;
@@ -159,12 +161,32 @@ export function extractPageData(useExtractionEngine = true) {
         .reduce((x, y) => x + y, 0);
       const linkDensity = textLen ? linkTextLen / textLen : 1;
       const formCount = el.querySelectorAll("input,button,select,textarea,form").length;
+      const articleCount = el.querySelectorAll("article").length;
       const structureReward = p * 450 + h * 260 + li * 110 + dataIdLike * 60 + timeLike * 90;
       const linkPenalty = Math.min(linkDensity, 0.9) * 3200 + Math.min(aCount, 350) * 4;
       const uiPenalty = Math.min(formCount, 100) * 160;
-      return (textLen + structureReward + centerBoost + widthBoost) - (linkPenalty + uiPenalty);
+      const multiArticlePenalty = Math.max(0, articleCount - 1) * 2000;
+      const tagBoost = (el.tagName || "").toLowerCase() === "article" ? 1200 : 0;
+      return (textLen + structureReward + centerBoost + topBoost + widthBoost + tagBoost) - (linkPenalty + uiPenalty + multiArticlePenalty);
+    };
+    const pickFirstArticle = () => {
+      const candidates = [
+        ...(document.querySelector("main")?.querySelectorAll?.("article") || []),
+        ...document.querySelectorAll("article")
+      ];
+      for (const el of candidates) {
+        if (!el || !(el instanceof Element)) continue;
+        if (isNonContentish(el) || el.matches?.(JUNK_SEL) || el.closest?.(JUNK_SEL)) continue;
+        const text = norm(el.textContent);
+        if (text.length >= MIN_GOOD_CHARS) {
+          return el;
+        }
+      }
+      return null;
     };
     const pickBestDomRoot = () => {
+      const firstArticle = pickFirstArticle();
+      if (firstArticle) return firstArticle;
       const preferred = [...document.querySelectorAll("article, main, [role='main'], section")];
       const all = [...document.querySelectorAll("article, main, [role='main'], section, div")];
       let best = null;

@@ -174,10 +174,37 @@ async function loadHistory() {
 async function clearHistory() {
   try {
     await storageSet({ summaryHistory: [] });
+    await clearCachedSummaries();
+    await clearSummaryViewStore();
     showNotification(document.getElementById("notification"), "History cleared successfully!", "success");
   } catch (error) {
     console.error("Error clearing history:", error);
     showNotification(document.getElementById("notification"), "Failed to clear history", "error");
+  }
+}
+
+async function clearCachedSummaries() {
+  try {
+    await platform.storage.set('local', { summaryCache: {} });
+  } catch (error) {
+    console.warn("Failed to clear summary cache:", error);
+  }
+}
+
+async function clearSummaryViewStore() {
+  try {
+    const sessionStorage = platform.storage.area('session');
+    if (sessionStorage?.set) {
+      await sessionStorage.set({ summaryView: {} });
+    }
+  } catch (error) {
+    console.warn("Failed to clear session summary view store:", error);
+  }
+
+  try {
+    await platform.storage.set('local', { summaryView: {} });
+  } catch (error) {
+    console.warn("Failed to clear local summary view store:", error);
   }
 }
 

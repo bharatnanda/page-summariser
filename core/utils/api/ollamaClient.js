@@ -5,9 +5,10 @@ import { readNdjsonStream } from '../streaming.js';
  * Call Ollama's /api/chat endpoint for summarization.
  * @param {string} prompt
  * @param {{ apiKey?: string, baseUrl?: string, model?: string }} settings
+ * @param {AbortSignal} [signal]
  * @returns {Promise<string>}
  */
-export async function callOllama(prompt, settings) {
+export async function callOllama(prompt, settings, signal) {
   const { apiKey, baseUrl, model } = settings;
 
   const resolvedBaseUrl = (baseUrl?.trim() || "http://localhost:11434").replace(/\/v1\/?$/, "");
@@ -31,7 +32,8 @@ export async function callOllama(prompt, settings) {
         messages: [{ role: "user", content: prompt.trim() }],
         options: undefined,
         stream: false
-      })
+      }),
+      signal
     });
 
     const responseText = await res.text();
@@ -80,9 +82,10 @@ export async function callOllama(prompt, settings) {
  * @param {string} prompt
  * @param {{ apiKey?: string, baseUrl?: string, model?: string }} settings
  * @param {(delta: string, fullText: string) => void} onDelta
+ * @param {AbortSignal} [signal]
  * @returns {Promise<string>}
  */
-export async function callOllamaStream(prompt, settings, onDelta) {
+export async function callOllamaStream(prompt, settings, onDelta, signal) {
   const { apiKey, baseUrl, model } = settings;
 
   const resolvedBaseUrl = (baseUrl?.trim() || "http://localhost:11434").replace(/\/v1\/?$/, "");
@@ -106,7 +109,8 @@ export async function callOllamaStream(prompt, settings, onDelta) {
         messages: [{ role: "user", content: prompt.trim() }],
         options: undefined,
         stream: true
-      })
+      }),
+      signal
     });
 
     if (!res.ok) {

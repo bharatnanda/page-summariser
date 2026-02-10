@@ -39,6 +39,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   const renderer = window.marked ? new marked.Renderer() : null;
   if (renderer) {
     renderer.html = (text) => escapeHtml(text);
+    renderer.link = (href, title, text) => {
+      const safeHref = isSafeLink(href) ? href : "";
+      const safeText = escapeHtml(text);
+      if (!safeHref) {
+        return safeText;
+      }
+      const titleAttr = title ? ` title="${escapeHtml(title)}"` : "";
+      return `<a href="${safeHref}"${titleAttr} target="_blank" rel="noopener noreferrer">${safeText}</a>`;
+    };
   }
 
   /**
@@ -224,3 +233,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   
 });
+
+/**
+ * Allow only http/https links in rendered markdown.
+ * @param {string} href
+ * @returns {boolean}
+ */
+function isSafeLink(href) {
+  if (!href) return false;
+  try {
+    const url = new URL(href, "https://example.com");
+    if (!url.protocol || url.protocol === "javascript:") return false;
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch (error) {
+    return false;
+  }
+}

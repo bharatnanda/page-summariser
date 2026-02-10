@@ -18,17 +18,17 @@ function shouldDisableStreaming(settings) {
  * @param {import('./settings.js').Settings} settings
  * @returns {Promise<string>}
  */
-export async function fetchSummary(prompt, settings) {
+export async function fetchSummary(prompt, settings, signal) {
   try {
     switch (settings.provider) {
       case "openai":
-        return await callOpenAI(prompt, settings);
+        return await callOpenAI(prompt, settings, signal);
       case "azure":
-        return await callAzure(prompt, settings);
+        return await callAzure(prompt, settings, signal);
       case "gemini":
-        return await callGemini(prompt, settings);
+        return await callGemini(prompt, settings, signal);
       case "ollama":
-        return await callOllama(prompt, settings);
+        return await callOllama(prompt, settings, signal);
       default:
         throw new Error(`Unsupported provider: ${settings.provider}. Please select a valid provider in the extension settings.`);
     }
@@ -46,10 +46,10 @@ export async function fetchSummary(prompt, settings) {
  * @param {(delta: string, fullText: string) => void} onDelta
  * @returns {Promise<string>}
  */
-export async function fetchSummaryStream(prompt, settings, onDelta) {
+export async function fetchSummaryStream(prompt, settings, onDelta, signal) {
   try {
     if (shouldDisableStreaming(settings)) {
-      const summary = await fetchSummary(prompt, settings);
+      const summary = await fetchSummary(prompt, settings, signal);
       if (onDelta && summary) {
         onDelta(summary, summary);
       }
@@ -57,15 +57,15 @@ export async function fetchSummaryStream(prompt, settings, onDelta) {
     }
     switch (settings.provider) {
       case "openai":
-        return await callOpenAIStream(prompt, settings, onDelta);
+        return await callOpenAIStream(prompt, settings, onDelta, signal);
       case "azure":
-        return await callAzureStream(prompt, settings, onDelta);
+        return await callAzureStream(prompt, settings, onDelta, signal);
       case "gemini":
-        return await callGeminiStream(prompt, settings, onDelta);
+        return await callGeminiStream(prompt, settings, onDelta, signal);
       case "ollama":
-        return await callOllamaStream(prompt, settings, onDelta);
+        return await callOllamaStream(prompt, settings, onDelta, signal);
       default: {
-        const summary = await fetchSummary(prompt, settings);
+        const summary = await fetchSummary(prompt, settings, signal);
         if (onDelta && summary) {
           onDelta(summary, summary);
         }

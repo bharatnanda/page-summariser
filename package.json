@@ -7,6 +7,7 @@
     "build:chrome": "node build/build.js chrome",
     "build:firefox": "node build/build.js firefox",
     "build:safari": "node build/build.js safari",
+    "build:all": "npm run build:chrome && npm run build:firefox && npm run build:safari",
     "clean": "node build/clean.js"
   }
 }

@@ -5,9 +5,10 @@ import { readSseStream } from '../streaming.js';
  * Call Azure OpenAI chat completions (non-streaming).
  * @param {string} prompt
  * @param {{ apiKey: string, baseUrl: string, deployment: string, apiVersion: string, model?: string }} settings
+ * @param {AbortSignal} [signal]
  * @returns {Promise<string>}
  */
-export async function callAzure(prompt, settings) {
+export async function callAzure(prompt, settings, signal) {
   const { apiKey, baseUrl, deployment, apiVersion, model } = settings;
 
   if (!apiKey) {
@@ -39,7 +40,8 @@ export async function callAzure(prompt, settings) {
       "Content-Type": "application/json",
       "api-key": apiKey
     },
-    body: JSON.stringify(requestBody)
+    body: JSON.stringify(requestBody),
+    signal
   });
 
   const data = await res.json();
@@ -69,9 +71,10 @@ export async function callAzure(prompt, settings) {
  * @param {string} prompt
  * @param {{ apiKey: string, baseUrl: string, deployment: string, apiVersion: string, model?: string }} settings
  * @param {(delta: string, fullText: string) => void} onDelta
+ * @param {AbortSignal} [signal]
  * @returns {Promise<string>}
  */
-export async function callAzureStream(prompt, settings, onDelta) {
+export async function callAzureStream(prompt, settings, onDelta, signal) {
   const { apiKey, baseUrl, deployment, apiVersion, model } = settings;
 
   if (!apiKey) {
@@ -104,7 +107,8 @@ export async function callAzureStream(prompt, settings, onDelta) {
       "Content-Type": "application/json",
       "api-key": apiKey
     },
-    body: JSON.stringify(requestBody)
+    body: JSON.stringify(requestBody),
+    signal
   });
 
   if (!res.ok) {

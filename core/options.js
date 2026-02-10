@@ -1,4 +1,5 @@
 import { platform } from './platform.js';
+import { showNotification } from './utils/notification.js';
 
 // Get references to key DOM elements
 const providerSelect = document.getElementById('provider');
@@ -7,11 +8,28 @@ const modelPresetSelect = document.getElementById('modelPreset');
 const deploymentPresetSelect = document.getElementById('deploymentPreset');
 const modelInput = document.getElementById('model');
 const deploymentInput = document.getElementById('deployment');
+const modelInputRow = document.getElementById('modelInputRow');
+const deploymentInputRow = document.getElementById('deploymentInputRow');
+const modelPresetHint = document.getElementById('modelPresetHint');
+const modelPresetValue = document.getElementById('modelPresetValue');
+const deploymentPresetHint = document.getElementById('deploymentPresetHint');
+const deploymentPresetValue = document.getElementById('deploymentPresetValue');
 const saveButton = document.getElementById('saveBtn');
 const resetButton = document.getElementById('resetBtn');
 const statusMessage = document.getElementById('status');
+const notification = document.getElementById('notification');
+const syncApiKeysCheckbox = document.getElementById('syncApiKeys');
+const useDefaultBlacklistCheckbox = document.getElementById('useDefaultBlacklist');
+const toggleDefaultBlacklistButton = document.getElementById('toggleDefaultBlacklist');
+const defaultBlacklistTextarea = document.getElementById('defaultBlacklistedUrls');
 const providerSettingsCache = {};
+const providerApiKeysCache = {};
 
+const DEFAULT_MODELS = {
+  openai: "gpt-4o-mini",
+  gemini: "gemini-2.5-flash",
+  ollama: "gemma3n"
+};
 const MODEL_PRESETS = {
   openai: [
     "gpt-3.5-turbo",
@@ -68,6 +86,58 @@ function populateDeploymentPresets(provider) {
   populatePresets(deploymentPresetSelect, DEPLOYMENT_PRESETS[provider] || []);
 }
 
+function stripApiKeysFromProviderSettings(providerSettings) {
+  const cleaned = {};
+  Object.entries(providerSettings || {}).forEach(([key, value]) => {
+    if (value && typeof value === "object") {
+      const { apiKey, ...rest } = value;
+      cleaned[key] = rest;
+    } else {
+      cleaned[key] = value;
+    }
+  });
+  return cleaned;
+}
+
+function migrateLegacyApiKeys(syncItems, providerSettingsCache, providerApiKeysCache) {
+  if (!syncItems) return;
+
+  const legacyKeys = {};
+  const providerSettings = syncItems.providerSettings || {};
+  Object.entries(providerSettings).forEach(([provider, settings]) => {
+    if (settings?.apiKey) {
+      legacyKeys[provider] = settings.apiKey;
+    }
+  });
+  if (syncItems.apiKey && !legacyKeys.openai) {
+    legacyKeys.openai = syncItems.apiKey;
+  }
+  Object.assign(legacyKeys, syncItems.providerApiKeys || {});
+
+  const mergedKeys = { ...providerApiKeysCache, ...legacyKeys };
+  providerApiKeysCache && Object.assign(providerApiKeysCache, mergedKeys);
+
+  const cleanedProviderSettings = stripApiKeysFromProviderSettings(providerSettingsCache);
+  Object.assign(providerSettingsCache, cleanedProviderSettings);
+
+  const syncWrites = {
+    providerSettings: cleanedProviderSettings,
+    apiKey: ""
+  };
+  if (syncItems.syncApiKeys) {
+    syncWrites.providerApiKeys = mergedKeys;
+  } else {
+    syncWrites.providerApiKeys = {};
+  }
+
+  Promise.all([
+    platform.storage.set('local', { providerApiKeys: mergedKeys }),
+    platform.storage.set('sync', syncWrites)
+  ]).catch((error) => {
+    console.warn("Failed to migrate legacy API keys:", error);
+  });
+}
+
 function syncPresetToInput(selectEl, inputEl) {
   if (!selectEl || !inputEl) return;
   const selected = selectEl.value;
@@ -86,6 +156,56 @@ function syncInputToPreset(selectEl, inputEl, presets) {
   }
 }
 
+function updatePresetUi() {
+  const provider = providerSelect.value.toLowerCase();
+  const hasModelPreset = (MODEL_PRESETS[provider] || []).length > 0;
+  const modelPreset = modelPresetSelect?.value || "__custom__";
+  const modelIsPreset = modelPreset !== "__custom__" && hasModelPreset;
+  const modelAllowed = ["openai", "gemini", "ollama"].includes(provider);
+  if (modelInputRow) {
+    modelInputRow.style.display = modelAllowed ? (modelIsPreset ? "none" : "block") : "none";
+  }
+  if (modelPresetHint && modelPresetValue) {
+    modelPresetHint.hidden = !modelIsPreset || !modelAllowed;
+    modelPresetValue.textContent = modelIsPreset ? modelPreset : "";
+  }
+
+  const deploymentPreset = deploymentPresetSelect?.value || "__custom__";
+  const deploymentIsPreset = deploymentPreset !== "__custom__";
+  const deploymentAllowed = provider === "azure";
+  if (deploymentInputRow) {
+    deploymentInputRow.style.display = deploymentAllowed ? (deploymentIsPreset ? "none" : "block") : "none";
+  }
+  if (deploymentPresetHint && deploymentPresetValue) {
+    deploymentPresetHint.hidden = !deploymentIsPreset || !deploymentAllowed;
+    deploymentPresetValue.textContent = deploymentIsPreset ? deploymentPreset : "";
+  }
+}
+
+function ensureDefaultsForProvider(provider) {
+  const presets = MODEL_PRESETS[provider] || [];
+  const defaultModel = DEFAULT_MODELS[provider] || "";
+  if (modelInput && presets.length) {
+    const current = modelInput.value.trim();
+    if (!presets.includes(current) && defaultModel) {
+      modelInput.value = defaultModel;
+      syncInputToPreset(modelPresetSelect, modelInput, presets);
+    }
+  }
+
+  if (provider === "azure" && deploymentInput) {
+    const deploymentPresets = DEPLOYMENT_PRESETS.azure || [];
+    const currentDeployment = deploymentInput.value.trim();
+    const fallback = deploymentPresets.includes("gpt-4o-mini")
+      ? "gpt-4o-mini"
+      : (deploymentPresets[0] || "");
+    if (!deploymentPresets.includes(currentDeployment) && fallback) {
+      deploymentInput.value = fallback;
+      syncInputToPreset(deploymentPresetSelect, deploymentInput, deploymentPresets);
+    }
+  }
+}
+
 /**
  * Updates the visibility of provider-specific input fields based on the selected provider.
  */
@@ -100,6 +220,8 @@ function updateProviderFields() {
       field.style.display = 'none';
     }
   });
+
+  updatePresetUi();
 }
 
 /**
@@ -138,12 +260,25 @@ function resetForm() {
   document.getElementById("promptProfile").value = "default";
   document.getElementById("useExtractionEngine").value = "true";
   document.getElementById("blacklistedUrls").value = "";
+  if (useDefaultBlacklistCheckbox) {
+    useDefaultBlacklistCheckbox.checked = true;
+  }
+  if (defaultBlacklistTextarea) {
+    defaultBlacklistTextarea.hidden = true;
+  }
+  if (toggleDefaultBlacklistButton) {
+    toggleDefaultBlacklistButton.textContent = "Show defaults";
+    toggleDefaultBlacklistButton.disabled = false;
+  }
+  if (syncApiKeysCheckbox) {
+    syncApiKeysCheckbox.checked = false;
+  }
 
   statusMessage.textContent = "";
   updateProviderFields();
   populateModelPresets("openai");
   if (modelInput) {
-    modelInput.value = "gpt-5-nano";
+    modelInput.value = DEFAULT_MODELS.openai;
   }
   syncInputToPreset(modelPresetSelect, modelInput, MODEL_PRESETS.openai);
   populateDeploymentPresets("azure");
@@ -157,25 +292,30 @@ function resetForm() {
  * Loads saved settings from chrome.storage.sync and populates the form fields.
  */
 function loadSettings() {
-  const fields = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "promptProfile", "useExtractionEngine", "blacklistedUrls", "defaultBlacklistedUrls"];
-  platform.storage.get('sync', fields).then((items) => {
+  const fields = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "promptProfile", "useExtractionEngine", "blacklistedUrls", "defaultBlacklistedUrls", "syncApiKeys"];
+  Promise.all([
+    platform.storage.get('sync', [...fields, 'providerApiKeys']),
+    platform.storage.get('local', ['providerApiKeys'])
+  ]).then(([items, localItems]) => {
     if (items.provider) document.getElementById("provider").value = items.provider;
-    const providerKey = (items.provider || "openai").toLowerCase();
+    const providerKey = (items.provider || providerSelect.value || "openai").toLowerCase();
     const providerSettings = items.providerSettings || {};
     Object.assign(providerSettingsCache, providerSettings);
+    const providerApiKeys = localItems.providerApiKeys || {};
+    Object.assign(providerApiKeysCache, providerApiKeys);
+    migrateLegacyApiKeys(items, providerSettingsCache, providerApiKeysCache);
+
+    const syncedApiKeys = items.providerApiKeys || {};
+    const apiKey = providerApiKeysCache[providerKey] || (items.syncApiKeys ? (syncedApiKeys[providerKey] || providerSettingsCache[providerKey]?.apiKey || items.apiKey || "") : "");
     const selectedSettings = providerSettingsCache[providerKey] || {
-      apiKey: items.apiKey || "",
       baseUrl: items.baseUrl || "",
       deployment: items.deployment || "",
       apiVersion: items.apiVersion || "",
       model: items.model || ""
     };
-    applyProviderSettingsToForm(selectedSettings);
-    if (!selectedSettings.model && providerKey === "openai" && modelInput) {
-      modelInput.value = "gpt-5-nano";
-    }
-    if (!selectedSettings.model && providerKey === "gemini" && modelInput) {
-      modelInput.value = "gemini-2.5-flash";
+    applyProviderSettingsToForm({ ...selectedSettings, apiKey });
+    if (!selectedSettings.model && modelInput) {
+      modelInput.value = DEFAULT_MODELS[providerKey] || "";
     }
     if (!selectedSettings.deployment && providerKey === "azure" && deploymentInput) {
       deploymentInput.value = "gpt-4o-mini";
@@ -186,13 +326,28 @@ function loadSettings() {
       document.getElementById("useExtractionEngine").value = String(Boolean(items.useExtractionEngine));
     }
     if (items.blacklistedUrls !== undefined) document.getElementById("blacklistedUrls").value = items.blacklistedUrls;
-    if (items.defaultBlacklistedUrls !== undefined) document.getElementById("defaultBlacklistedUrls").value = items.defaultBlacklistedUrls;
+    if (items.defaultBlacklistedUrls !== undefined) defaultBlacklistTextarea.value = items.defaultBlacklistedUrls;
+    if (useDefaultBlacklistCheckbox) {
+      useDefaultBlacklistCheckbox.checked = Boolean((items.defaultBlacklistedUrls || "").trim());
+    }
+    if (defaultBlacklistTextarea) {
+      defaultBlacklistTextarea.hidden = true;
+    }
+    if (toggleDefaultBlacklistButton) {
+      toggleDefaultBlacklistButton.textContent = "Show defaults";
+      toggleDefaultBlacklistButton.disabled = !useDefaultBlacklistCheckbox?.checked;
+    }
+    if (syncApiKeysCheckbox) {
+      syncApiKeysCheckbox.checked = Boolean(items.syncApiKeys);
+    }
     updateProviderFields();
     populateModelPresets(providerKey);
     syncInputToPreset(modelPresetSelect, modelInput, MODEL_PRESETS[providerKey] || []);
     populateDeploymentPresets(providerKey);
     syncInputToPreset(deploymentPresetSelect, deploymentInput, DEPLOYMENT_PRESETS[providerKey] || []);
     providerSelect.dataset.currentProvider = providerSelect.value;
+    ensureDefaultsForProvider(providerKey);
+    updatePresetUi();
   });
 }
 
@@ -202,20 +357,38 @@ function loadSettings() {
 function saveSettings() {
   const providerKey = providerSelect.value.toLowerCase();
   const providerSpecific = getProviderSettingsFromForm();
+  const { apiKey, ...providerSpecificNoKey } = providerSpecific;
   const globalSettings = {
     provider: providerSelect.value,
     language: document.getElementById("language").value.trim(),
     promptProfile: document.getElementById("promptProfile").value,
     useExtractionEngine: document.getElementById("useExtractionEngine").value === "true",
     blacklistedUrls: document.getElementById("blacklistedUrls").value.trim(),
-    defaultBlacklistedUrls: document.getElementById("defaultBlacklistedUrls").value.trim()
+    defaultBlacklistedUrls: useDefaultBlacklistCheckbox?.checked
+      ? defaultBlacklistTextarea.value.trim()
+      : "",
+    syncApiKeys: Boolean(syncApiKeysCheckbox?.checked)
   };
 
-  providerSettingsCache[providerKey] = providerSpecific;
+  providerSettingsCache[providerKey] = providerSpecificNoKey;
+  providerApiKeysCache[providerKey] = apiKey;
 
-  platform.storage.set('sync', { ...globalSettings, providerSettings: providerSettingsCache }).then(() => {
-    statusMessage.textContent = "Settings saved! ✅";
-    setTimeout(() => { statusMessage.textContent = ""; }, 2000);
+  const syncWrites = { ...globalSettings, providerSettings: providerSettingsCache };
+  if (syncApiKeysCheckbox?.checked) {
+    syncWrites.providerApiKeys = providerApiKeysCache;
+  } else {
+    syncWrites.providerApiKeys = {};
+  }
+
+  Promise.all([
+    platform.storage.set('sync', syncWrites),
+    platform.storage.set('local', { providerApiKeys: providerApiKeysCache })
+  ]).then(() => {
+    statusMessage.textContent = "";
+    showNotification(notification, "Settings saved!", "success");
+  }).catch((error) => {
+    console.error("Failed to save settings:", error);
+    showNotification(notification, "Failed to save settings", "error");
   });
 }
 
@@ -225,9 +398,13 @@ providerSelect.addEventListener('change', () => {
   const nextProvider = providerSelect.value.toLowerCase();
   const currentSettings = getProviderSettingsFromForm();
 
-  providerSettingsCache[currentProvider] = currentSettings;
+  const { apiKey, ...currentNoKey } = currentSettings;
+  providerSettingsCache[currentProvider] = currentNoKey;
+  providerApiKeysCache[currentProvider] = apiKey;
+
   const nextSettings = providerSettingsCache[nextProvider] || {};
-  applyProviderSettingsToForm(nextSettings);
+  const nextApiKey = providerApiKeysCache[nextProvider] || "";
+  applyProviderSettingsToForm({ ...nextSettings, apiKey: nextApiKey });
   platform.storage.set('sync', { providerSettings: providerSettingsCache }).then(() => {
     providerSelect.dataset.currentProvider = providerSelect.value;
     updateProviderFields();
@@ -235,24 +412,46 @@ providerSelect.addEventListener('change', () => {
     syncInputToPreset(modelPresetSelect, modelInput, MODEL_PRESETS[nextProvider] || []);
     populateDeploymentPresets(nextProvider);
     syncInputToPreset(deploymentPresetSelect, deploymentInput, DEPLOYMENT_PRESETS[nextProvider] || []);
+    ensureDefaultsForProvider(nextProvider);
+    updatePresetUi();
   });
 });
 modelPresetSelect?.addEventListener("change", () => {
   syncPresetToInput(modelPresetSelect, modelInput);
+  updatePresetUi();
 });
 deploymentPresetSelect?.addEventListener("change", () => {
   syncPresetToInput(deploymentPresetSelect, deploymentInput);
+  updatePresetUi();
 });
 modelInput?.addEventListener("input", () => {
   const provider = providerSelect.value.toLowerCase();
   syncInputToPreset(modelPresetSelect, modelInput, MODEL_PRESETS[provider] || []);
+  updatePresetUi();
 });
 deploymentInput?.addEventListener("input", () => {
   const provider = providerSelect.value.toLowerCase();
   syncInputToPreset(deploymentPresetSelect, deploymentInput, DEPLOYMENT_PRESETS[provider] || []);
+  updatePresetUi();
 });
 saveButton.addEventListener("click", saveSettings);
 resetButton.addEventListener("click", resetForm);
+toggleDefaultBlacklistButton?.addEventListener("click", () => {
+  if (!defaultBlacklistTextarea || !toggleDefaultBlacklistButton) return;
+  const isHidden = defaultBlacklistTextarea.hidden;
+  defaultBlacklistTextarea.hidden = !isHidden;
+  toggleDefaultBlacklistButton.textContent = isHidden ? "Hide defaults" : "Show defaults";
+});
+
+useDefaultBlacklistCheckbox?.addEventListener("change", () => {
+  if (!useDefaultBlacklistCheckbox || !defaultBlacklistTextarea || !toggleDefaultBlacklistButton) return;
+  const enabled = useDefaultBlacklistCheckbox.checked;
+  if (!enabled) {
+    defaultBlacklistTextarea.hidden = true;
+    toggleDefaultBlacklistButton.textContent = "Show defaults";
+  }
+  toggleDefaultBlacklistButton.disabled = !enabled;
+});
 
 // Load settings and update provider fields when the DOM is fully loaded
 document.addEventListener("DOMContentLoaded", () => {
