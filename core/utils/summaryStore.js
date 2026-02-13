@@ -41,7 +41,7 @@ function pruneStore(store) {
 /**
  * Save a summary for short-term viewing and return its ID.
  * @param {string} summary
- * @param {{ title?: string, sourceUrl?: string, provider?: string, model?: string }} meta
+ * @param {{ title?: string, sourceUrl?: string, provider?: string, model?: string, content?: string, historyId?: string, thread?: Array<{ question: string, answer: string, timestamp: string }> }} meta
  * @returns {Promise<string>}
  */
 export async function saveSummaryForView(summary, meta = {}) {
@@ -56,6 +56,9 @@ export async function saveSummaryForView(summary, meta = {}) {
     sourceUrl: meta.sourceUrl || "",
     provider: meta.provider || "",
     model: meta.model || "",
+    content: meta.content || "",
+    historyId: meta.historyId || "",
+    thread: Array.isArray(meta.thread) ? meta.thread : [],
     timestamp: Date.now()
   };
 
@@ -67,7 +70,7 @@ export async function saveSummaryForView(summary, meta = {}) {
 /**
  * Load a saved summary by ID.
  * @param {string} id
- * @returns {Promise<{ summary: string, title: string, sourceUrl: string, provider?: string, model?: string, timestamp: number } | null>}
+ * @returns {Promise<{ summary: string, title: string, sourceUrl: string, provider?: string, model?: string, content?: string, historyId?: string, thread?: Array<{ question: string, answer: string, timestamp: string }>, timestamp: number } | null>}
  */
 export async function loadSummaryForView(id) {
   if (!id) return null;
@@ -78,4 +81,20 @@ export async function loadSummaryForView(id) {
     await storage.set({ [STORAGE_KEY]: store });
   }
   return store[id] || null;
+}
+
+/**
+ * Update the thread for a saved summary.
+ * @param {string} id
+ * @param {Array<{ question: string, answer: string, timestamp: string }>} thread
+ * @returns {Promise<void>}
+ */
+export async function updateSummaryThread(id, thread) {
+  if (!id) return;
+  const storage = getStorageArea();
+  const result = await storage.get([STORAGE_KEY]);
+  const store = result[STORAGE_KEY] || {};
+  if (!store[id]) return;
+  store[id].thread = Array.isArray(thread) ? thread : [];
+  await storage.set({ [STORAGE_KEY]: store });
 }

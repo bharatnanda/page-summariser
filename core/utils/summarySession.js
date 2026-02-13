@@ -76,7 +76,8 @@ async function incrementPageCount() {
  */
 async function saveToHistory(url, summary, title, meta = {}) {
   const historyItem = createHistoryItem(url, summary, title, meta);
-  await addHistoryItem(historyItem);
+  const result = await addHistoryItem(historyItem);
+  return result.id || historyItem.id || "";
 }
 
 /**
@@ -84,7 +85,7 @@ async function saveToHistory(url, summary, title, meta = {}) {
  * @param {string} content
  * @param {string} pageURL
  * @param {{ onDelta?: (delta: string) => void, title?: string, signal?: AbortSignal }} options
- * @returns {Promise<{ summary: string, settings: import('./settings.js').Settings }>}
+ * @returns {Promise<{ summary: string, settings: import('./settings.js').Settings, content: string, historyId: string }>}
  */
 async function generateSummary(content, pageURL, options = {}) {
   const { onDelta, signal } = options;
@@ -117,11 +118,13 @@ async function generateSummary(content, pageURL, options = {}) {
     throw new Error("The AI model failed to generate a summary. Please try again later.");
   }
 
-  await saveToHistory(pageURL, summary, options.title || "", {
+  const historyId = await saveToHistory(pageURL, summary, options.title || "", {
     provider: settings.provider,
-    model: settings.provider === "azure" ? settings.deployment : settings.model
+    model: settings.provider === "azure" ? settings.deployment : settings.model,
+    content: adjustedContent,
+    thread: []
   });
-  return { summary, settings };
+  return { summary, settings, content: adjustedContent, historyId };
 }
 
 /**
@@ -163,7 +166,10 @@ export const summarySession = {
       title: cachedSummary.title || "",
       sourceUrl: cachedSummary.sourceUrl || "",
       provider: cachedSummary.provider || "",
-      model: cachedSummary.model || ""
+      model: cachedSummary.model || "",
+      content: cachedSummary.content || "",
+      historyId: cachedSummary.historyId || "",
+      thread: cachedSummary.thread || []
     });
 
     return { handled: true, summary: cachedSummary.summary, summaryId };
@@ -175,14 +181,17 @@ export const summarySession = {
    * @returns {Promise<SummarySessionResult>}
    */
   async runNonStreaming({ content, pageURL, title, incrementCounter, cacheKey }) {
-    const { summary, settings } = await generateSummary(content, pageURL, { title });
+    const { summary, settings, content: adjustedContent, historyId } = await generateSummary(content, pageURL, { title });
 
     if (cacheKey) {
       await cacheSummary(cacheKey, summary, {
         title,
         sourceUrl: pageURL,
         provider: settings.provider,
-        model: settings.provider === "azure" ? settings.deployment : settings.model
+        model: settings.provider === "azure" ? settings.deployment : settings.model,
+        content: adjustedContent,
+        historyId,
+        thread: []
       });
     }
 
@@ -194,7 +203,10 @@ export const summarySession = {
       title,
       sourceUrl: pageURL,
       provider: settings.provider,
-      model: settings.provider === "azure" ? settings.deployment : settings.model
+      model: settings.provider === "azure" ? settings.deployment : settings.model,
+      content: adjustedContent,
+      historyId,
+      thread: []
     });
     return { summary, summaryId };
   },
@@ -207,14 +219,17 @@ export const summarySession = {
   async runStreaming({ content, pageURL, title, incrementCounter, cacheKey, streamId, onDelta, signal }) {
     openResultsPage({ streamId });
 
-    const { summary, settings } = await generateSummary(content, pageURL, { title, onDelta, signal });
+    const { summary, settings, content: adjustedContent, historyId } = await generateSummary(content, pageURL, { title, onDelta, signal });
 
     if (cacheKey) {
       await cacheSummary(cacheKey, summary, {
         title,
         sourceUrl: pageURL,
         provider: settings.provider,
-        model: settings.provider === "azure" ? settings.deployment : settings.model
+        model: settings.provider === "azure" ? settings.deployment : settings.model,
+        content: adjustedContent,
+        historyId,
+        thread: []
       });
     }
 
@@ -228,7 +243,10 @@ export const summarySession = {
         title,
         sourceUrl: pageURL,
         provider: settings.provider,
-        model: settings.provider === "azure" ? settings.deployment : settings.model
+        model: settings.provider === "azure" ? settings.deployment : settings.model,
+        content: adjustedContent,
+        historyId,
+        thread: []
       });
     } catch (error) {
       // Ignore summary store errors.

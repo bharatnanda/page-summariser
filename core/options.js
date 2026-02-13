@@ -1,5 +1,6 @@
 import { platform } from './platform.js';
 import { showNotification } from './utils/notification.js';
+import { applyTheme, loadThemeAndApply } from './utils/theme.js';
 
 // Get references to key DOM elements
 const providerSelect = document.getElementById('provider');
@@ -17,6 +18,7 @@ const deploymentPresetValue = document.getElementById('deploymentPresetValue');
 const saveButton = document.getElementById('saveBtn');
 const resetButton = document.getElementById('resetBtn');
 const notification = document.getElementById('notification');
+const themeSelect = document.getElementById('theme');
 const syncApiKeysCheckbox = document.getElementById('syncApiKeys');
 const useDefaultBlacklistCheckbox = document.getElementById('useDefaultBlacklist');
 const toggleDefaultBlacklistButton = document.getElementById('toggleDefaultBlacklist');
@@ -257,6 +259,10 @@ function resetForm() {
   applyProviderSettingsToForm({});
   document.getElementById("language").value = "english";
   document.getElementById("promptProfile").value = "default";
+  if (themeSelect) {
+    themeSelect.value = "light";
+    applyTheme("light");
+  }
   document.getElementById("useExtractionEngine").value = "true";
   document.getElementById("blacklistedUrls").value = "";
   if (useDefaultBlacklistCheckbox) {
@@ -291,7 +297,7 @@ function resetForm() {
  * Loads saved settings from chrome.storage.sync and populates the form fields.
  */
 function loadSettings() {
-  const fields = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "promptProfile", "useExtractionEngine", "blacklistedUrls", "defaultBlacklistedUrls", "syncApiKeys"];
+  const fields = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "promptProfile", "theme", "useExtractionEngine", "blacklistedUrls", "defaultBlacklistedUrls", "syncApiKeys"];
   Promise.all([
     platform.storage.get('sync', [...fields, 'providerApiKeys']),
     platform.storage.get('local', ['providerApiKeys'])
@@ -321,6 +327,10 @@ function loadSettings() {
     }
     if (items.language) document.getElementById("language").value = items.language;
     if (items.promptProfile) document.getElementById("promptProfile").value = items.promptProfile;
+    if (themeSelect) {
+      themeSelect.value = items.theme || "light";
+      applyTheme(themeSelect.value);
+    }
     if (items.useExtractionEngine !== undefined) {
       document.getElementById("useExtractionEngine").value = String(Boolean(items.useExtractionEngine));
     }
@@ -361,6 +371,7 @@ function saveSettings() {
     provider: providerSelect.value,
     language: document.getElementById("language").value.trim(),
     promptProfile: document.getElementById("promptProfile").value,
+    theme: themeSelect?.value || "light",
     useExtractionEngine: document.getElementById("useExtractionEngine").value === "true",
     blacklistedUrls: document.getElementById("blacklistedUrls").value.trim(),
     defaultBlacklistedUrls: useDefaultBlacklistCheckbox?.checked
@@ -435,6 +446,9 @@ deploymentInput?.addEventListener("input", () => {
 });
 saveButton.addEventListener("click", saveSettings);
 resetButton.addEventListener("click", resetForm);
+themeSelect?.addEventListener("change", () => {
+  applyTheme(themeSelect.value);
+});
 toggleDefaultBlacklistButton?.addEventListener("click", () => {
   if (!defaultBlacklistTextarea || !toggleDefaultBlacklistButton) return;
   const isHidden = defaultBlacklistTextarea.hidden;
@@ -454,6 +468,6 @@ useDefaultBlacklistCheckbox?.addEventListener("change", () => {
 
 // Load settings and update provider fields when the DOM is fully loaded
 document.addEventListener("DOMContentLoaded", () => {
-  loadSettings();
+  loadThemeAndApply().then(() => loadSettings());
   providerSelect.dataset.currentProvider = providerSelect.value;
 });

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Page Summary</title>
   <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/katex/katex.min.css">
   <style>
     body {
       background: var(--app-bg);
@@ -40,20 +41,6 @@
       color: var(--primary);
     }
 
-    .controls {
-      display: flex;
-      gap: 12px;
-      margin-top: 15px;
-      width: 100%;
-    }
-
-    @media (min-width: 768px) {
-      .controls {
-        width: auto;
-        margin-top: 0;
-      }
-    }
-
     .action-buttons {
       display: flex;
       gap: 12px;
@@ -62,13 +49,15 @@
 
     .content {
       padding: 30px;
+      padding-bottom: 220px;
     }
 
     #summary {
+      width: 100%;
       background: var(--surface-subtle);
       padding: 25px;
       border-radius: 10px;
-      line-height: 1.7;
+      line-height: 1.65;
       font-size: 1.05rem;
     }
 
@@ -132,105 +121,307 @@
       100% { content: "···"; }
     }
 
-    #summary h1,
-    #summary h2,
-    #summary h3 {
+    :is(#summary, .followup-answer) h1,
+    :is(#summary, .followup-answer) h2,
+    :is(#summary, .followup-answer) h3 {
       color: var(--primary);
-      margin-top: 1.5em;
-      margin-bottom: 0.7em;
+      margin-top: 1.1em;
+      margin-bottom: 0.5em;
       font-weight: 600;
     }
 
-    #summary h1 {
+    :is(#summary, .followup-answer) h1 {
       font-size: 1.8rem;
     }
 
-    #summary h2 {
+    :is(#summary, .followup-answer) h2 {
       font-size: 1.5rem;
     }
 
-    #summary h3 {
+    :is(#summary, .followup-answer) h3 {
       font-size: 1.3rem;
     }
 
-    #summary p {
-      margin: 1em 0;
+    :is(#summary, .followup-answer) p {
+      margin: 0.6em 0;
     }
 
-    #summary ul,
-    #summary ol {
-      margin: 1em 0 1em 1.5em;
-      padding-left: 1.2em;
+    :is(#summary, .followup-answer) ul,
+    :is(#summary, .followup-answer) ol {
+      margin: 0.6em 0 0.6em 1.4em;
+      padding-left: 1.1em;
     }
 
-    #summary li {
-      margin-bottom: 0.5em;
+    :is(#summary, .followup-answer) li {
+      margin-bottom: 0.35em;
     }
 
-    #summary strong {
+    :is(#summary, .followup-answer) strong {
       font-weight: 600;
       color: var(--dark-text);
     }
 
-    #summary em {
+    :is(#summary, .followup-answer) em {
       color: var(--secondary);
     }
 
-    #summary code {
-      background-color: #e8eaed;
+    :is(#summary, .followup-answer) code {
+      background-color: var(--code-bg);
       padding: 2px 6px;
       border-radius: 4px;
       font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
       font-size: 0.9em;
     }
 
-    #summary pre {
-      background: #1f2937;
-      color: #f8f9fa;
+    :is(#summary, .followup-answer) pre {
+      background: var(--pre-bg);
+      color: var(--pre-text);
       padding: 16px;
       border-radius: 6px;
       overflow-x: auto;
       margin: 1.5em 0;
     }
 
-    #summary pre code {
+    :is(#summary, .followup-answer) pre code {
       background: none;
       padding: 0;
       color: inherit;
     }
 
-    #summary blockquote {
+    :is(#summary, .followup-answer) blockquote {
       border-left: 4px solid var(--primary);
-      padding: 10px 20px;
-      margin: 1.5em 0;
-      background: rgba(11, 87, 208, 0.08);
+      padding: 8px 16px;
+      margin: 0.8em 0;
+      background: var(--blockquote-bg);
     }
 
-    #summary table {
+    :is(#summary, .followup-answer) > :first-child {
+      margin-top: 0;
+    }
+
+    :is(#summary, .followup-answer) > :last-child {
+      margin-bottom: 0;
+    }
+
+    :is(#summary, .followup-answer) table {
       width: 100%;
       border-collapse: collapse;
       margin: 1.5em 0;
     }
 
-    #summary table th,
-    #summary table td {
+    :is(#summary, .followup-answer) table th,
+    :is(#summary, .followup-answer) table td {
       padding: 12px 15px;
       text-align: left;
       border-bottom: 1px solid var(--border);
     }
 
-    #summary table th {
+    :is(#summary, .followup-answer) table th {
       background: var(--table-header-bg);
       font-weight: 600;
     }
 
-    #summary a {
+    :is(#summary, .followup-answer) a {
       color: var(--primary);
       text-decoration: none;
     }
 
-    #summary a:hover {
+    :is(#summary, .followup-answer) a:hover {
       text-decoration: underline;
+    }
+
+    .followup {
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      background: var(--surface);
+      border-radius: 10px;
+      box-shadow: var(--card-shadow);
+      backdrop-filter: blur(10px);
+      margin-top: 18px;
+    }
+
+    .followup h2 {
+      font-size: 1.05rem;
+      margin: 0;
+      color: var(--dark-text);
+      font-weight: 600;
+    }
+
+    .followup-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sumzy-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--dark-text);
+    }
+
+    .sumzy-chip img {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+    }
+
+    .followup textarea {
+      width: 100%;
+      min-height: 90px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+      color: var(--dark-text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      resize: vertical;
+    }
+
+    .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .suggestion-chip {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--dark-text);
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    .suggestion-chip:hover {
+      background: var(--primary-light);
+      border-color: rgba(11, 87, 208, 0.2);
+    }
+
+    .followup-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .followup-status {
+      font-size: 0.85rem;
+      color: var(--light-text);
+    }
+
+    .followup-status.loading::after {
+      content: " ···";
+      animation: followupDots 1.2s infinite;
+    }
+
+    @keyframes followupDots {
+      0% { content: " ···"; }
+      33% { content: " ··"; }
+      66% { content: " ·"; }
+      100% { content: " ···"; }
+    }
+
+    .followup-send {
+      border: none;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 50%;
+      background: var(--primary);
+      color: var(--on-primary);
+      font-weight: 600;
+      box-shadow: var(--primary-shadow);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+    }
+
+    .followup-send:hover {
+      transform: translateY(-1px);
+      background: var(--primary-dark);
+      box-shadow: var(--primary-shadow-hover);
+    }
+
+    .followup-send:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .followup-thread {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .followup-item {
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+    }
+
+    .followup-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .followup-avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    .followup-role {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--secondary);
+      letter-spacing: 0.01em;
+    }
+
+    .followup-question {
+      font-weight: 600;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+      color: var(--dark-text);
+    }
+
+    .followup-answer {
+      padding: 0;
+      border: none;
+      background: transparent;
+      white-space: pre-wrap;
+      line-height: 1.65;
+      font-size: 1.05rem;
+      font-family: inherit;
     }
 
     footer {
@@ -305,6 +496,26 @@
       <div id="summary">
         <p>Loading summary...</p>
       </div>
+      <section class="followup" aria-label="Follow-up questions">
+        <div class="followup-title">
+          <h2>Ask Sumzy a follow-up question</h2>
+          <span class="sumzy-chip">
+            <img src="icon16.png" alt="Sumzy" />
+            Sumzy
+          </span>
+        </div>
+        <div id="followupThread" class="followup-thread"></div>
+        <div id="suggestions" class="suggestions" hidden></div>
+        <textarea id="followupInput" placeholder="Ask a question about this page... (Enter to send, Shift+Enter for a new line)"></textarea>
+        <div class="followup-actions">
+          <div id="followupStatus" class="followup-status"></div>
+          <button id="followupBtn" class="followup-send" aria-label="Ask follow-up question">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M3.4 20.4 21 12 3.4 3.6l.7 6.2 9.9 2.2-9.9 2.2z"/>
+            </svg>
+          </button>
+        </div>
+      </section>
     </div>
 
     <footer>
@@ -315,6 +526,8 @@
   <div id="notification" class="notification"></div>
 
   <script src="markdown.js"></script>
+  <script src="assets/katex/katex.min.js"></script>
+  <script src="assets/katex/auto-render.min.js"></script>
   <script type="module" src="results.js"></script>
 </body>
 </html>

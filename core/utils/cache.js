@@ -5,7 +5,7 @@ const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
 /**
  * Get cached summary for a URL if it exists and is not expired.
  * @param {string} url - The page URL
- * @returns {Promise<{ summary: string, title: string, sourceUrl: string, provider?: string, model?: string, timestamp: number } | null>}
+ * @returns {Promise<{ summary: string, title: string, sourceUrl: string, provider?: string, model?: string, content?: string, historyId?: string, thread?: Array<{ question: string, answer: string, timestamp: string }>, timestamp: number } | null>}
  */
 export async function getCachedSummary(url) {
   try {
@@ -34,7 +34,7 @@ export async function getCachedSummary(url) {
  * Save a summary to cache.
  * @param {string} url - The page URL
  * @param {string} summary - The summary text
- * @param {{ title?: string, sourceUrl?: string, provider?: string, model?: string }} meta - Optional metadata
+ * @param {{ title?: string, sourceUrl?: string, provider?: string, model?: string, content?: string, historyId?: string, thread?: Array<{ question: string, answer: string, timestamp: string }> }} meta - Optional metadata
  * @returns {Promise<void>}
  */
 export async function cacheSummary(url, summary, meta = {}) {
@@ -48,6 +48,9 @@ export async function cacheSummary(url, summary, meta = {}) {
       sourceUrl: meta.sourceUrl || "",
       provider: meta.provider || "",
       model: meta.model || "",
+      content: meta.content || "",
+      historyId: meta.historyId || "",
+      thread: Array.isArray(meta.thread) ? meta.thread : [],
       timestamp: Date.now()
     };
     

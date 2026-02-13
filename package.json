@@ -9,5 +9,8 @@
     "build:safari": "node build/build.js safari",
     "build:all": "npm run build:chrome && npm run build:firefox && npm run build:safari",
     "clean": "node build/clean.js"
+  },
+  "dependencies": {
+    "katex": "^0.16.11"
   }
 }

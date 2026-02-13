@@ -79,6 +79,7 @@ First infer the page type and summarize accordingly:
 - Do not include headings, section titles, or labels (e.g., “Summary”, “Key Entities”, “Overall”).
 - Do not include any preamble or closing remarks.
 - Do not include any follow-up questions, offers to help, or requests for more input.
+- If you include formulas or equations, format them in LaTeX and wrap inline math with $...$ and block math with $$...$$.
 
 Output only the summary.
 
@@ -117,4 +118,48 @@ export function buildSummarizationPrompt(content, language = "english", promptPr
     return buildCompactPrompt(content, language);
   }
   return buildDefaultPrompt(content, language);
+}
+
+/**
+ * Build a follow-up question prompt using existing page content.
+ * @param {string} content
+ * @param {string} question
+ * @param {string} language
+ * @returns {string}
+ */
+export function buildFollowUpPrompt(content, question, language = "english") {
+  return `
+You are answering a follow-up question about a webpage. Use only the provided page content.
+If the answer is not in the content, say you don't know based on the page.
+Respond in ${language} using concise Markdown.
+If you include formulas or equations, format them in LaTeX and wrap inline math with $...$ and block math with $$...$$.
+
+Question:
+${question}
+
+Page Content:
+${content}
+`;
+}
+
+/**
+ * Build a prompt to suggest follow-up questions based on a summary.
+ * @param {string} content
+ * @param {string} summary
+ * @param {string} language
+ * @returns {string}
+ */
+export function buildFollowupSuggestionsPrompt(content, summary, language = "english") {
+  return `
+You are generating follow-up questions for a webpage summary.
+Create 3 to 5 short, specific questions a user might ask next.
+Use ${language}. Keep each question under 12 words.
+Return the result strictly as a JSON array of strings.
+
+Summary:
+${summary}
+
+Page Content (for reference):
+${content}
+`;
 }

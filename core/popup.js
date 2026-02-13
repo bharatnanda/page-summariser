@@ -1,8 +1,10 @@
 import { getPageContent } from './utils/contentExtractor.js';
 import { showNotification } from './utils/notification.js';
 import { platform } from './platform.js';
+import { loadThemeAndApply } from './utils/theme.js';
 
 document.addEventListener("DOMContentLoaded", async () => {
+  await loadThemeAndApply();
   const notification = document.getElementById("notification");
   await updateCounterDisplay();
 

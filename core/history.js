@@ -3,8 +3,10 @@ import { saveSummaryForView } from './utils/summaryStore.js';
 import { showNotification } from './utils/notification.js';
 import { storageGetWithFallback, storageSetWithFallback } from './utils/storage.js';
 import { platform } from './platform.js';
+import { loadThemeAndApply } from './utils/theme.js';
 
 document.addEventListener("DOMContentLoaded", async () => {
+  await loadThemeAndApply();
   const historyTableBody = document.getElementById("historyTableBody");
   const clearHistoryBtn = document.getElementById("clearHistoryBtn");
 
@@ -73,6 +75,7 @@ async function loadHistory() {
       const provider = item.provider || "";
       const model = item.model || "";
       const preview = item.contentPreview || createContentPreview(item.summary);
+      const thread = Array.isArray(item.thread) ? item.thread : [];
       const formattedDate = formatDate(item.timestamp);
       const formattedTime = formatTime(item.timestamp);
 
@@ -105,6 +108,14 @@ async function loadHistory() {
       const previewCell = document.createElement("td");
       previewCell.className = "preview-cell";
       previewCell.textContent = preview;
+
+      if (thread.length) {
+        const threadInfo = document.createElement("div");
+        threadInfo.className = "thread-info";
+        const lastQuestion = thread[thread.length - 1]?.question || "";
+        threadInfo.textContent = `Q&A: ${thread.length} • Last: ${lastQuestion}`;
+        previewCell.appendChild(threadInfo);
+      }
 
       const dateCell = document.createElement("td");
       dateCell.className = "date-cell";
@@ -242,7 +253,10 @@ function viewFullSummary(index) {
         title: item.title || "",
         sourceUrl: item.sourceUrl || item.url || "",
         provider: item.provider || "",
-        model: item.model || ""
+        model: item.model || "",
+        content: item.content || "",
+        historyId: item.id || "",
+        thread: Array.isArray(item.thread) ? item.thread : []
       })
         .then((id) => {
           const encoded = encodeURIComponent(id);

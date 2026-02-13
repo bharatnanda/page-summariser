@@ -5,15 +5,19 @@ import { platform } from './platform.js';
 import { summarySession } from './utils/summarySession.js';
 import { DEFAULT_BLACKLIST } from './utils/defaultBlacklist.js';
 import { buildToastStyle } from './utils/notification.js';
+import { loadSummaryForView } from './utils/summaryStore.js';
+import { buildFollowUpPrompt, buildFollowupSuggestionsPrompt, clampContentForProvider } from './utils/promptBuilder.js';
+import { fetchSummary, fetchSummaryStream } from './utils/apiClient.js';
 
 const activeStreams = new Map();
+const followupStreams = new Map();
 
 /**
  * Generate a unique stream identifier for UI streaming.
  * @returns {string}
  */
-function createStreamId() {
-  return `stream_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+function createStreamId(prefix = "stream") {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 /**
@@ -60,6 +64,37 @@ function sendStreamMessage(streamId, message) {
   }
 }
 
+function registerFollowupStream(streamId) {
+  const controller = new AbortController();
+  followupStreams.set(streamId, { port: null, buffer: [], controller });
+}
+
+function cleanupFollowupStream(streamId) {
+  const stream = followupStreams.get(streamId);
+  if (!stream) return;
+  if (stream.controller && !stream.controller.signal.aborted) {
+    stream.controller.abort();
+  }
+  if (stream.port) {
+    try {
+      stream.port.disconnect();
+    } catch (error) {
+      // Ignore disconnect errors.
+    }
+  }
+  followupStreams.delete(streamId);
+}
+
+function sendFollowupMessage(streamId, message) {
+  const stream = followupStreams.get(streamId);
+  if (!stream) return;
+  if (stream.port) {
+    stream.port.postMessage(message);
+  } else {
+    stream.buffer.push(message);
+  }
+}
+
 async function showInPageToast(message, type = "info") {
   try {
     const [tab] = await platform.tabs.query({ active: true, currentWindow: true });
@@ -92,29 +127,56 @@ async function showInPageToast(message, type = "info") {
 }
 
 platform.runtime.onConnect.addListener((port) => {
-  if (!port.name.startsWith("summaryStream:")) return;
-  const streamId = port.name.slice("summaryStream:".length);
-  const stream = activeStreams.get(streamId);
-  if (!stream) {
-    port.postMessage({ type: "error", message: "Stream not found or expired." });
-    port.disconnect();
+  if (port.name.startsWith("summaryStream:")) {
+    const streamId = port.name.slice("summaryStream:".length);
+    const stream = activeStreams.get(streamId);
+    if (!stream) {
+      port.postMessage({ type: "error", message: "Stream not found or expired." });
+      port.disconnect();
+      return;
+    }
+    stream.port = port;
+    if (stream.buffer.length) {
+      for (const message of stream.buffer) {
+        port.postMessage(message);
+      }
+      stream.buffer = [];
+    }
+    port.onDisconnect.addListener(() => {
+      if (stream.port === port) {
+        stream.port = null;
+        if (stream.controller && !stream.controller.signal.aborted) {
+          stream.controller.abort();
+        }
+      }
+    });
     return;
   }
-  stream.port = port;
-  if (stream.buffer.length) {
-    for (const message of stream.buffer) {
-      port.postMessage(message);
+
+  if (port.name.startsWith("followupStream:")) {
+    const streamId = port.name.slice("followupStream:".length);
+    const stream = followupStreams.get(streamId);
+    if (!stream) {
+      port.postMessage({ type: "error", message: "Stream not found or expired." });
+      port.disconnect();
+      return;
     }
-    stream.buffer = [];
-  }
-  port.onDisconnect.addListener(() => {
-    if (stream.port === port) {
-      stream.port = null;
-      if (stream.controller && !stream.controller.signal.aborted) {
-        stream.controller.abort();
+    stream.port = port;
+    if (stream.buffer.length) {
+      for (const message of stream.buffer) {
+        port.postMessage(message);
       }
+      stream.buffer = [];
     }
-  });
+    port.onDisconnect.addListener(() => {
+      if (stream.port === port) {
+        stream.port = null;
+        if (stream.controller && !stream.controller.signal.aborted) {
+          stream.controller.abort();
+        }
+      }
+    });
+  }
 });
 
 // Create context menu item when extension is installed
@@ -177,17 +239,118 @@ platform.contextMenus.onClicked.addListener(async (info, tab) => {
 });
 
 platform.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.action !== "streamSummary") return;
-  startSummaryStream({
-    content: message.content,
-    pageURL: message.pageURL,
-    title: message.title || "",
-    incrementCounter: Boolean(message.incrementCounter),
-    cacheKey: message.cacheKey || null
-  })
-    .then((streamId) => sendResponse({ status: "started", streamId }))
-    .catch((error) => sendResponse({ status: "error", message: error.message }));
-  return true;
+  if (message?.action === "streamSummary") {
+    startSummaryStream({
+      content: message.content,
+      pageURL: message.pageURL,
+      title: message.title || "",
+      incrementCounter: Boolean(message.incrementCounter),
+      cacheKey: message.cacheKey || null
+    })
+      .then((streamId) => sendResponse({ status: "started", streamId }))
+      .catch((error) => sendResponse({ status: "error", message: error.message }));
+    return true;
+  }
+
+  if (message?.action === "followupQuestion") {
+    const summaryId = message.summaryId || "";
+    const question = (message.question || "").trim();
+    const streamId = createStreamId("followup");
+    registerFollowupStream(streamId);
+    const stream = followupStreams.get(streamId);
+
+    (async () => {
+      if (!summaryId) {
+        throw new Error("Missing summary reference. Please re-open the summary and try again.");
+      }
+      if (!question) {
+        throw new Error("Please enter a question.");
+      }
+      const stored = await loadSummaryForView(summaryId);
+      const content = stored?.content || "";
+      if (!content) {
+        throw new Error("This summary doesn't include cached content for follow-up questions.");
+      }
+      const settings = await getSettings();
+      if (!settings.apiKey && settings.provider !== "ollama") {
+        throw new Error("API key is missing. Please set your API key in the extension settings.");
+      }
+      const adjustedContent = clampContentForProvider(content, settings);
+      const prompt = buildFollowUpPrompt(adjustedContent, question, settings.language);
+      const answer = await fetchSummaryStream(prompt, settings, (delta, fullText) => {
+        sendFollowupMessage(streamId, { type: "delta", delta, fullText });
+      }, stream?.controller?.signal);
+      if (!answer || answer.trim().length === 0) {
+        throw new Error("The AI model failed to answer the question. Please try again.");
+      }
+      return answer;
+    })()
+      .then((answer) => {
+        sendFollowupMessage(streamId, { type: "done", answer });
+      })
+      .catch((error) => {
+        sendFollowupMessage(streamId, { type: "error", message: error.message });
+      })
+      .finally(() => {
+        setTimeout(() => cleanupFollowupStream(streamId), 30000);
+      });
+
+    sendResponse({ status: "started", streamId });
+    return true;
+  }
+
+  if (message?.action === "suggestQuestions") {
+    const summaryId = message.summaryId || "";
+    (async () => {
+      if (!summaryId) {
+        throw new Error("Missing summary reference.");
+      }
+      const stored = await loadSummaryForView(summaryId);
+      const content = stored?.content || "";
+      const summary = stored?.summary || "";
+      if (!content || !summary) {
+        throw new Error("Summary content not available for suggestions.");
+      }
+      const settings = await getSettings();
+      if (!settings.apiKey && settings.provider !== "ollama") {
+        throw new Error("API key is missing. Please set your API key in the extension settings.");
+      }
+      const adjustedContent = clampContentForProvider(content, settings);
+      const prompt = buildFollowupSuggestionsPrompt(adjustedContent, summary, settings.language);
+      const response = await fetchSummary(prompt, settings);
+      let text = String(response || "").trim();
+      text = text.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
+      let suggestions = [];
+      try {
+        if (text.startsWith("[") && text.endsWith("]")) {
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed)) {
+            suggestions = parsed.map(item => String(item || "").trim()).filter(Boolean);
+          }
+        } else {
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed)) {
+            suggestions = parsed.map(item => String(item || "").trim()).filter(Boolean);
+          }
+        }
+      } catch {
+        suggestions = text
+          .replace(/^\s*\[/, "")
+          .replace(/\]\s*$/, "")
+          .split(/\n+/)
+          .map(line => line.replace(/^[-*]\s+/, "").trim())
+          .filter(Boolean);
+      }
+      suggestions = suggestions.slice(0, 5);
+      if (!suggestions.length) {
+        throw new Error("No suggestions available.");
+      }
+      return suggestions;
+    })()
+      .then((suggestions) => sendResponse({ status: "ok", suggestions }))
+      .catch((error) => sendResponse({ status: "error", message: error.message }));
+    return true;
+  }
 });
 
 // Periodically clear expired cache entries (every 6 hours)
