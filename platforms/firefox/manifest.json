@@ -30,8 +30,13 @@
   "options_page": "options.html",
   "browser_specific_settings": {
     "gecko": {
-      "id": "page-summarizer@example.com",
-      "strict_min_version": "109.0"
+      "id": "page-summarizer@bharatnanda",
+      "strict_min_version": "142.0",
+      "data_collection_permissions": {
+        "required": [
+          "websiteContent"
+        ]
+      }
     }
   },
   "icons": {

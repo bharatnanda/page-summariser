@@ -56,12 +56,18 @@ document.addEventListener("DOMContentLoaded", async () => {
    */
   function renderSummary(text) {
     if (window.marked) {
-      container.innerHTML = marked.parse(text, {
+      const html = marked.parse(text, {
         breaks: true,
         renderer,
         mangle: false,
         headerIds: false
       });
+      const parsed = new DOMParser().parseFromString(html, "text/html");
+      const fragment = document.createDocumentFragment();
+      Array.from(parsed.body.childNodes).forEach((node) => {
+        fragment.appendChild(node);
+      });
+      container.replaceChildren(fragment);
     } else {
       container.textContent = text;
     }
@@ -70,7 +76,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   try {
     if (streamId) {
-      container.innerHTML = '<span class="streaming-indicator">Streaming summary</span>';
+      const indicator = document.createElement("span");
+      indicator.className = "streaming-indicator";
+      indicator.textContent = "Streaming summary";
+      container.replaceChildren(indicator);
       decodedText = "";
     } else if (summaryId) {
       const stored = await loadSummaryForView(summaryId);
