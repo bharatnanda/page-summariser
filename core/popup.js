@@ -16,11 +16,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("summarizeBtn").addEventListener("click", async () => {
     const summarizeBtn = document.getElementById("summarizeBtn");
-    const originalBtnText = summarizeBtn.innerHTML;
+    const labelNode = summarizeBtn.querySelector("span");
+    const originalBtnText = labelNode?.textContent || summarizeBtn.textContent;
     
     try {
       // Show loading state
-      summarizeBtn.innerHTML = '<span>Loading...</span>';
+      if (labelNode) {
+        labelNode.textContent = "Loading...";
+      } else {
+        summarizeBtn.textContent = "Loading...";
+      }
       summarizeBtn.disabled = true;
       
       const pageData = await getPageContent();
@@ -46,7 +51,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       showNotification(notification, `${err.message}`, "error");
     } finally {
       // Restore button state
-      summarizeBtn.innerHTML = originalBtnText;
+      if (labelNode) {
+        labelNode.textContent = originalBtnText;
+      } else {
+        summarizeBtn.textContent = originalBtnText;
+      }
       summarizeBtn.disabled = false;
     }
   });
