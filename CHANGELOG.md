@@ -1,3 +1,12 @@
+# **Changelog 1.1.1**
+
+- Added KaTeX rendering on results page with LaTeX preservation for inline and display math.
+- History now stores full summaries separately with IDs, enabling full-text viewing and cleanup on delete/clear.
+- Content previews and history trimming now protect LaTeX math.
+- Increased history summary limit and improved duplicate detection with summary hashing.
+- Updated prompts to preserve LaTeX in model outputs.
+- Updated README with math support and history enhancements.
+
 # **Changelog 1.1.0**
 
 - Added streaming summaries for OpenAI, Azure, Gemini, and Ollama with shared stream parsing helpers.  

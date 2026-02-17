@@ -17,10 +17,11 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
 - **Content Extraction**: Automatically extracts text content from web pages
 - **Smart Summarization**: Generates concise, well-structured summaries
 - **Streaming Summaries**: Watch summaries appear in real time for supported providers
-- **History Tracking**: Keeps track of your previous summaries
+- **History Tracking**: Keeps track of your previous summaries with full-text storage for detailed viewing
 - **Caching**: Caches summaries for 30 minutes to reduce API usage
 - **Domain Blacklisting**: Prevents summarization on restricted domains with a comprehensive default list for security and privacy
 - **Multi-Language Support**: Summarize content in multiple languages
+- **Math Rendering**: Preserves LaTeX and renders inline/block math in summaries
 - **Responsive Design**: Works on all device sizes
 - **Consistent Toasts**: In-page toast messages for success/error feedback across browsers
 
@@ -69,7 +70,7 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
 ### Viewing History
 1. Click the Page Summarizer icon in your browser toolbar
 2. Click "View History" to see your previous summaries
-3. Click any row to view the full summary
+3. Click any row to view the full summary (including full-text math)
 4. Use the delete button to remove individual summaries
 
 ### Managing Settings
@@ -148,6 +149,9 @@ These domains are blacklisted by default to protect sensitive information. Users
 ### Detailed Privacy Information
 For complete information about how we handle your data, please read our [Privacy Policy](PRIVACY_POLICY.md).
 
+### Third-Party Notices
+Third-party licenses and notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 
 ### Data Flow
 
@@ -156,8 +160,8 @@ For complete information about how we handle your data, please read our [Privacy
 3. Background script checks cache for an existing summary
 4. If not cached, content is sent to the selected AI provider
 5. Summary streams back to the results page in real time
-6. Summary is displayed with title/source metadata
-7. Summary is saved to history and cache
+6. Summary is displayed with title/source metadata and rendered math
+7. Summary is saved to history (full text) and cache
 
 ## Development
 
