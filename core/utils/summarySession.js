@@ -3,7 +3,7 @@ import { buildSummarizationPrompt, clampContentForProvider } from './promptBuild
 import { fetchSummary, fetchSummaryStream } from './apiClient.js';
 import { combineBlacklists, isDomainBlacklisted } from './domainBlacklist.js';
 import { saveSummaryForView } from './summaryStore.js';
-import { addHistoryItem, createHistoryItem } from './historyStore.js';
+import { addHistoryItem, createHistoryItem, deleteSummaryForHistory, saveSummaryForHistory } from './historyStore.js';
 import { cacheSummary, getCachedSummary } from './cache.js';
 import { platform } from '../platform.js';
 
@@ -75,8 +75,18 @@ async function incrementPageCount() {
  * @returns {Promise<void>}
  */
 async function saveToHistory(url, summary, title, meta = {}) {
-  const historyItem = createHistoryItem(url, summary, title, meta);
-  await addHistoryItem(historyItem);
+  let summaryId = null;
+  try {
+    summaryId = await saveSummaryForHistory(summary);
+  } catch (error) {
+    summaryId = null;
+  }
+
+  const historyItem = createHistoryItem(url, summary, title, meta, summaryId);
+  const result = await addHistoryItem(historyItem);
+  if (summaryId && result.status === 'duplicate') {
+    await deleteSummaryForHistory(summaryId);
+  }
 }
 
 /**

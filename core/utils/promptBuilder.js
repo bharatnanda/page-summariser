@@ -60,6 +60,7 @@ First infer the page type and summarize accordingly:
 - Calls to action/recommendations/proposed solutions (if present).
 - Trends/comparisons/historical context **if relevant and present**.
 - Implications/consequences **only if explicitly stated or clearly supported by the text** (no speculation).
+- Preserve mathematical expressions in LaTeX. Use $...$ for inline math and $$...$$ for display math.
 
 ### If the page includes code
 - Summarize what the code does and any setup/config/dependencies.
@@ -99,6 +100,7 @@ Rules:
 - No headings, labels, preambles, or closing remarks.
 - No follow-up questions or offers to help.
 - Focus on the core facts, intent, and any critical numbers or dates.
+- Preserve mathematical expressions in LaTeX using $...$ or $$...$$.
 
 Page Content:
 ${content}

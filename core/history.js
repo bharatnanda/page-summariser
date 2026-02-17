@@ -1,5 +1,6 @@
 import { createContentPreview } from './utils/preview.js';
 import { saveSummaryForView } from './utils/summaryStore.js';
+import { clearHistorySummaries, deleteSummaryForHistory } from './utils/historyStore.js';
 import { showNotification } from './utils/notification.js';
 import { storageGetWithFallback, storageSetWithFallback } from './utils/storage.js';
 import { platform } from './platform.js';
@@ -68,11 +69,11 @@ async function loadHistory() {
 
     const fragment = document.createDocumentFragment();
     history.forEach((item, index) => {
-      const sourceUrl = item.sourceUrl || item.url || extractSource(item.summary);
+      const sourceUrl = item.sourceUrl || item.url || extractSource(item.summary || "");
       const title = item.title || "";
       const provider = item.provider || "";
       const model = item.model || "";
-      const preview = item.contentPreview || createContentPreview(item.summary);
+      const preview = item.contentPreview || createContentPreview(item.summary || "");
       const formattedDate = formatDate(item.timestamp);
       const formattedTime = formatTime(item.timestamp);
 
@@ -176,6 +177,7 @@ async function clearHistory() {
     await storageSet({ summaryHistory: [] });
     await clearCachedSummaries();
     await clearSummaryViewStore();
+    await clearHistorySummaries();
     showNotification(document.getElementById("notification"), "History cleared successfully!", "success");
   } catch (error) {
     console.error("Error clearing history:", error);
@@ -219,7 +221,10 @@ async function deleteHistoryItem(index) {
     const history = result.summaryHistory || [];
     
     if (index >= 0 && index < history.length) {
-      history.splice(index, 1);
+      const [removed] = history.splice(index, 1);
+      if (removed?.summaryId) {
+        await deleteSummaryForHistory(removed.summaryId);
+      }
       await storageSet({ summaryHistory: history });
       showNotification(document.getElementById("notification"), "Summary deleted!", "success");
     }
@@ -238,20 +243,34 @@ function viewFullSummary(index) {
     const history = result.summaryHistory || [];
     if (index >= 0 && index < history.length) {
       const item = history[index];
-      saveSummaryForView(item.summary, {
+      const sourceUrl = item.sourceUrl || item.url || "";
+      const meta = {
         title: item.title || "",
-        sourceUrl: item.sourceUrl || item.url || "",
+        sourceUrl,
         provider: item.provider || "",
         model: item.model || ""
-      })
-        .then((id) => {
-          const encoded = encodeURIComponent(id);
-          platform.tabs.create({ url: platform.runtime.getURL(`results.html?id=${encoded}`) });
-        })
-        .catch(() => {
-          const encoded = encodeURIComponent(item.summary);
-          platform.tabs.create({ url: platform.runtime.getURL(`results.html?text=${encoded}`) });
-        });
+      };
+      const fallbackSummary = item.summary || "";
+
+      const openWithSummary = (summaryText) => {
+        saveSummaryForView(summaryText, meta)
+          .then((id) => {
+            const encoded = encodeURIComponent(id);
+            platform.tabs.create({ url: platform.runtime.getURL(`results.html?id=${encoded}`) });
+          })
+          .catch(() => {
+            const encoded = encodeURIComponent(summaryText || "No summary available.");
+            platform.tabs.create({ url: platform.runtime.getURL(`results.html?text=${encoded}`) });
+          });
+      };
+
+      if (item.summaryId) {
+        const encoded = encodeURIComponent(item.summaryId);
+        platform.tabs.create({ url: platform.runtime.getURL(`results.html?historyId=${encoded}`) });
+        return;
+      }
+
+      openWithSummary(fallbackSummary);
     }
   });
 }

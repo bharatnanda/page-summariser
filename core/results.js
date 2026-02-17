@@ -1,4 +1,5 @@
 import { loadSummaryForView } from './utils/summaryStore.js';
+import { findHistoryItemBySummaryId, loadSummaryForHistory } from './utils/historyStore.js';
 import { showNotification } from './utils/notification.js';
 import { platform } from './platform.js';
 
@@ -32,6 +33,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const params = new URLSearchParams(window.location.search);
   const rawText = params.get("text");
   const summaryId = params.get("id");
+  const historyId = params.get("historyId");
   const streamId = params.get("streamId");
   let decodedText = "No summary available.";
   let summaryMeta = { title: "", sourceUrl: "", provider: "", model: "" };
@@ -56,7 +58,8 @@ document.addEventListener("DOMContentLoaded", async () => {
    */
   function renderSummary(text) {
     if (window.marked) {
-      const html = marked.parse(text, {
+      const mathProtected = protectMath(text);
+      const html = marked.parse(mathProtected.text, {
         breaks: true,
         renderer,
         mangle: false,
@@ -68,6 +71,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         fragment.appendChild(node);
       });
       container.replaceChildren(fragment);
+      restoreMathPlaceholders(container, mathProtected.placeholders);
+      renderMath(container);
     } else {
       container.textContent = text;
     }
@@ -81,6 +86,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       indicator.textContent = "Streaming summary";
       container.replaceChildren(indicator);
       decodedText = "";
+    } else if (historyId) {
+      const [historySummary, historyItem] = await Promise.all([
+        loadSummaryForHistory(historyId),
+        findHistoryItemBySummaryId(historyId)
+      ]);
+      if (historySummary) {
+        decodedText = historySummary;
+      } else if (historyItem?.summary) {
+        decodedText = historyItem.summary;
+      }
+      if (historyItem) {
+        summaryMeta = {
+          title: historyItem.title || "",
+          sourceUrl: historyItem.sourceUrl || historyItem.url || "",
+          provider: historyItem.provider || "",
+          model: historyItem.model || ""
+        };
+      }
     } else if (summaryId) {
       const stored = await loadSummaryForView(summaryId);
       if (stored?.summary) {
@@ -233,6 +256,142 @@ document.addEventListener("DOMContentLoaded", async () => {
     const words = (text || "").trim().match(/\S+/g);
     const count = words ? words.length : 0;
     summaryMetrics.textContent = `Word count: ${count}`;
+  }
+
+  function protectMath(input) {
+    const placeholders = [];
+    if (!input) return { text: "", placeholders };
+
+    const fenceSplit = input.split("```");
+    const processed = fenceSplit.map((segment, index) => {
+      if (index % 2 === 1) {
+        return segment;
+      }
+      return protectMathInSegment(segment, placeholders);
+    });
+
+    return { text: processed.join("```"), placeholders };
+  }
+
+  function protectMathInSegment(segment, placeholders) {
+    let result = "";
+    let i = 0;
+    while (i < segment.length) {
+      const char = segment[i];
+      if (char === "`") {
+        const end = segment.indexOf("`", i + 1);
+        if (end !== -1) {
+          result += segment.slice(i, end + 1);
+          i = end + 1;
+          continue;
+        }
+      }
+
+      if (segment.startsWith("$$", i)) {
+        const end = findMathEnd(segment, i + 2, "$$");
+        if (end !== -1) {
+          const math = segment.slice(i, end + 2);
+          result += addMathPlaceholder(math, placeholders);
+          i = end + 2;
+          continue;
+        }
+      }
+
+      if (char === "$" && !segment.startsWith("$$", i)) {
+        const end = findMathEnd(segment, i + 1, "$");
+        if (end !== -1) {
+          const math = segment.slice(i, end + 1);
+          result += addMathPlaceholder(math, placeholders);
+          i = end + 1;
+          continue;
+        }
+      }
+
+      result += char;
+      i += 1;
+    }
+    return result;
+  }
+
+  function findMathEnd(text, startIndex, delimiter) {
+    let i = startIndex;
+    while (i < text.length) {
+      if (delimiter === "$$" && text.startsWith("$$", i)) {
+        if (!isEscaped(text, i)) return i;
+        i += 2;
+        continue;
+      }
+      if (delimiter === "$" && text[i] === "$") {
+        if (!isEscaped(text, i)) return i;
+      }
+      i += 1;
+    }
+    return -1;
+  }
+
+  function isEscaped(text, index) {
+    let backslashes = 0;
+    let i = index - 1;
+    while (i >= 0 && text[i] === "\\") {
+      backslashes += 1;
+      i -= 1;
+    }
+    return backslashes % 2 === 1;
+  }
+
+  function addMathPlaceholder(math, placeholders) {
+    const token = `@@MATH_${placeholders.length}@@`;
+    placeholders.push(math);
+    return token;
+  }
+
+  function restoreMathPlaceholders(container, placeholders) {
+    if (!container || placeholders.length === 0) return;
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const replacements = [];
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (!node.nodeValue || !node.nodeValue.includes("@@MATH_")) continue;
+      replacements.push(node);
+    }
+
+    replacements.forEach((textNode) => {
+      const value = textNode.nodeValue || "";
+      const fragment = document.createDocumentFragment();
+      let cursor = 0;
+      const regex = /@@MATH_(\d+)@@/g;
+      let match;
+      while ((match = regex.exec(value)) !== null) {
+        if (match.index > cursor) {
+          fragment.appendChild(document.createTextNode(value.slice(cursor, match.index)));
+        }
+        const index = Number(match[1]);
+        const math = placeholders[index] ?? match[0];
+        fragment.appendChild(document.createTextNode(math));
+        cursor = match.index + match[0].length;
+      }
+      if (cursor < value.length) {
+        fragment.appendChild(document.createTextNode(value.slice(cursor)));
+      }
+      textNode.parentNode?.replaceChild(fragment, textNode);
+    });
+  }
+
+  function renderMath(target) {
+    if (!target || typeof window.renderMathInElement !== "function") return;
+    try {
+      window.renderMathInElement(target, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false },
+          { left: "\\(", right: "\\)", display: false },
+          { left: "\\[", right: "\\]", display: true }
+        ],
+        throwOnError: false
+      });
+    } catch (err) {
+      console.error("KaTeX render error:", err);
+    }
   }
   
 });

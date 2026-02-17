@@ -13,6 +13,7 @@ function run() {
   assert(prompt.includes('under **250 words**'), 'Prompt should include 250 word cap');
   assert(prompt.includes('Length Target'), 'Prompt should include adaptive length section');
   assert(prompt.includes('Page Content:'), 'Prompt should include content section');
+  assert(prompt.includes('Preserve mathematical expressions in LaTeX'), 'Prompt should preserve math');
 
   console.log('promptBuilder tests passed');
 }
