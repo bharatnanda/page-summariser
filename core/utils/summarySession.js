@@ -7,6 +7,8 @@ import { addHistoryItem, createHistoryItem, deleteSummaryForHistory, saveSummary
 import { cacheSummary, getCachedSummary } from './cache.js';
 import { platform } from '../platform.js';
 
+const DEBUG_EXTRACTED_CONTENT_KEY = 'debugExtractedContent';
+
 /**
  * @typedef {Object} SummaryMeta
  * @property {string} [title]
@@ -40,6 +42,23 @@ function openResultsPage(payload) {
   platform.tabs.create({
     url: platform.runtime.getURL(target)
   });
+}
+
+async function saveExtractedContentForDebug(content, meta) {
+  if (!content) return;
+  try {
+    await platform.storage.set('local', {
+      [DEBUG_EXTRACTED_CONTENT_KEY]: {
+        content,
+        title: meta?.title || "",
+        sourceUrl: meta?.sourceUrl || "",
+        timestamp: Date.now(),
+        contentLength: content.length
+      }
+    });
+  } catch (error) {
+    console.warn("Failed to store extracted content for debug:", error);
+  }
 }
 
 /**
@@ -111,6 +130,13 @@ async function generateSummary(content, pageURL, options = {}) {
 
   if (!content) {
     throw new Error("No content found on this page. Please try another page.");
+  }
+
+  if (settings.storeExtractedContent) {
+    await saveExtractedContentForDebug(content, {
+      title: options.title || "",
+      sourceUrl: pageURL || ""
+    });
   }
 
   if (!settings.apiKey && settings.provider !== "ollama") {

@@ -41,7 +41,7 @@ function protectMath(input) {
         continue;
       }
     }
-    if (input[i] === "$" && !input.startsWith("$$", i)) {
+    if (input[i] === "$" && !input.startsWith("$$", i) && !isEscaped(input, i)) {
       const end = findMathEnd(input, i + 1, "$");
       if (end !== -1) {
         const math = input.slice(i, end + 1);

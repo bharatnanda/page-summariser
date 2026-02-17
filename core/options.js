@@ -44,8 +44,8 @@ const MODEL_PRESETS = {
     "gemini-2.5-pro",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
-    "gemini-3-pro",
-    "gemini-3-flash"
+    "gemini-3-pro-preview",
+    "gemini-3-flash-preview"
   ]
 };
 
@@ -258,6 +258,14 @@ function resetForm() {
   document.getElementById("language").value = "english";
   document.getElementById("promptProfile").value = "default";
   document.getElementById("useExtractionEngine").value = "true";
+  const maxContentCharsInput = document.getElementById("maxContentChars");
+  if (maxContentCharsInput) {
+    maxContentCharsInput.value = "";
+  }
+  const storeExtractedContentCheckbox = document.getElementById("storeExtractedContent");
+  if (storeExtractedContentCheckbox) {
+    storeExtractedContentCheckbox.checked = false;
+  }
   document.getElementById("blacklistedUrls").value = "";
   if (useDefaultBlacklistCheckbox) {
     useDefaultBlacklistCheckbox.checked = true;
@@ -291,7 +299,7 @@ function resetForm() {
  * Loads saved settings from chrome.storage.sync and populates the form fields.
  */
 function loadSettings() {
-  const fields = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "promptProfile", "useExtractionEngine", "blacklistedUrls", "defaultBlacklistedUrls", "syncApiKeys"];
+  const fields = ["provider", "providerSettings", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "promptProfile", "useExtractionEngine", "maxContentChars", "storeExtractedContent", "blacklistedUrls", "defaultBlacklistedUrls", "syncApiKeys"];
   Promise.all([
     platform.storage.get('sync', [...fields, 'providerApiKeys']),
     platform.storage.get('local', ['providerApiKeys'])
@@ -323,6 +331,14 @@ function loadSettings() {
     if (items.promptProfile) document.getElementById("promptProfile").value = items.promptProfile;
     if (items.useExtractionEngine !== undefined) {
       document.getElementById("useExtractionEngine").value = String(Boolean(items.useExtractionEngine));
+    }
+    const maxContentCharsInput = document.getElementById("maxContentChars");
+    if (maxContentCharsInput) {
+      maxContentCharsInput.value = items.maxContentChars ? String(items.maxContentChars) : "";
+    }
+    const storeExtractedContentCheckbox = document.getElementById("storeExtractedContent");
+    if (storeExtractedContentCheckbox) {
+      storeExtractedContentCheckbox.checked = Boolean(items.storeExtractedContent);
     }
     if (items.blacklistedUrls !== undefined) document.getElementById("blacklistedUrls").value = items.blacklistedUrls;
     if (items.defaultBlacklistedUrls !== undefined) defaultBlacklistTextarea.value = items.defaultBlacklistedUrls;
@@ -362,6 +378,12 @@ function saveSettings() {
     language: document.getElementById("language").value.trim(),
     promptProfile: document.getElementById("promptProfile").value,
     useExtractionEngine: document.getElementById("useExtractionEngine").value === "true",
+    maxContentChars: (() => {
+      const raw = document.getElementById("maxContentChars").value.trim();
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    })(),
+    storeExtractedContent: Boolean(document.getElementById("storeExtractedContent")?.checked),
     blacklistedUrls: document.getElementById("blacklistedUrls").value.trim(),
     defaultBlacklistedUrls: useDefaultBlacklistCheckbox?.checked
       ? defaultBlacklistTextarea.value.trim()

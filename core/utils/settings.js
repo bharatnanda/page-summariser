@@ -24,6 +24,8 @@ import { DEFAULT_BLACKLIST } from './defaultBlacklist.js';
  * @property {string} blacklistedUrls
  * @property {string} defaultBlacklistedUrls
  * @property {boolean} disableStreamingOnSafari
+ * @property {number} maxContentChars
+ * @property {boolean} storeExtractedContent
  */
 
 /**
@@ -32,7 +34,7 @@ import { DEFAULT_BLACKLIST } from './defaultBlacklist.js';
  */
 
 export async function getSettings() {
-  const keys = ["provider", "providerSettings", "providerApiKeys", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "promptProfile", "useExtractionEngine", "blacklistedUrls", "defaultBlacklistedUrls", "defaultBlacklistInitialized", "syncApiKeys"];
+  const keys = ["provider", "providerSettings", "providerApiKeys", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "promptProfile", "useExtractionEngine", "maxContentChars", "storeExtractedContent", "blacklistedUrls", "defaultBlacklistedUrls", "defaultBlacklistInitialized", "syncApiKeys"];
   let settings = {};
   let localSettings = {};
   try {
@@ -72,6 +74,10 @@ export async function getSettings() {
     language: (settings.language || "").trim(),
     promptProfile: settings.promptProfile === "compact" ? "compact" : "default",
     useExtractionEngine: Boolean(settings.useExtractionEngine),
+    maxContentChars: Number.isFinite(Number(settings.maxContentChars)) && Number(settings.maxContentChars) > 0
+      ? Number(settings.maxContentChars)
+      : null,
+    storeExtractedContent: Boolean(settings.storeExtractedContent),
     blacklistedUrls: (settings.blacklistedUrls || "").trim(),
     defaultBlacklistedUrls: await resolveDefaultBlacklist(settings),
     disableStreamingOnSafari,

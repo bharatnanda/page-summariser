@@ -3,11 +3,11 @@ import { assert, assertEqual } from './testUtils.js';
 
 function run() {
   const longText = 'a'.repeat(70000);
-  const openaiClamped = clampContentForProvider(longText, { provider: 'openai' });
-  assertEqual(openaiClamped.length, 50000, 'OpenAI clamp should be 50k chars');
+  const defaultClamped = clampContentForProvider(longText, {});
+  assertEqual(defaultClamped.length, 60000, 'Default clamp should be 60k chars');
 
-  const geminiClamped = clampContentForProvider(longText, { provider: 'gemini' });
-  assertEqual(geminiClamped.length, 30000, 'Gemini clamp should be 30k chars');
+  const customClamped = clampContentForProvider(longText, { maxContentChars: 42000 });
+  assertEqual(customClamped.length, 42000, 'Custom clamp should use maxContentChars');
 
   const prompt = buildSummarizationPrompt('hello', 'english');
   assert(prompt.includes('under **250 words**'), 'Prompt should include 250 word cap');

@@ -276,6 +276,15 @@
           </select>
         </label>
         <p class="help">Smart Extraction is more accurate but may be slower on heavy pages.</p>
+        <label>Max Content Characters:
+          <input type="number" id="maxContentChars" min="1000" step="1000" placeholder="Leave blank for provider default" />
+        </label>
+        <p class="help">Optional override. Leave blank to use provider-specific limits.</p>
+        <label class="inline-toggle">
+          <input type="checkbox" id="storeExtractedContent" />
+          Store extracted page content (debug)
+        </label>
+        <p class="help">Stores the extracted text in local storage for debugging. May include sensitive content.</p>
 
         <h3>Content Access</h3>
         <label>Blocked Sites:

@@ -297,7 +297,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
 
-      if (char === "$" && !segment.startsWith("$$", i)) {
+      if (char === "$" && !segment.startsWith("$$", i) && !isEscaped(segment, i)) {
         const end = findMathEnd(segment, i + 1, "$");
         if (end !== -1) {
           const math = segment.slice(i, end + 1);

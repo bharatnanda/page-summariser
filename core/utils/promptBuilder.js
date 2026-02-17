@@ -1,11 +1,15 @@
 /**
- * Clamp content length based on provider limits to reduce token usage.
+ * Clamp content length to a configured maximum to reduce token usage.
  * @param {string} content
  * @param {import('./settings.js').Settings} settings
  * @returns {string}
  */
 export function clampContentForProvider(content, settings) {
   if (!content) return "";
+  const overrideMax = Number(settings?.maxContentChars);
+  if (Number.isFinite(overrideMax) && overrideMax > 0) {
+    return content.length > overrideMax ? content.slice(0, overrideMax) : content;
+  }
 
   const provider = (settings?.provider || "").toLowerCase();
   let maxChars = 60000;
@@ -15,7 +19,6 @@ export function clampContentForProvider(content, settings) {
   } else if (provider === "openai" || provider === "azure") {
     maxChars = 50000;
   }
-
   return content.length > maxChars ? content.slice(0, maxChars) : content;
 }
 
@@ -27,15 +30,22 @@ export function clampContentForProvider(content, settings) {
  */
 function buildDefaultPrompt(content, language) {
   return `
-You are a professional summarizer.  
+You are a professional summarizer.
 Read the webpage content provided below and produce a clear, concise summary in ${language}.
 
 ## Hard Constraints
 - Must keep the summary under **250 words**.
-- Use **bullet points ('-') by default**; use short paragraphs only when needed or when bulleting harms clarity (especially in dense docs).
+- Use **bullet points ('-') by default**; use short paragraphs only if the page is a single cohesive narrative and bulleting harms clarity (common in essays).
 - Use a **table only** for comparative data or structured lists with **3+ similar items**.
 - Use **bold** to emphasize the most important names, organizations, and key conclusions (avoid over-bolding).
 - Wrap long URLs in angle brackets < > if included.
+
+## Stability Requirements (Strict)
+- Summarize **only what is present in the provided page content**. Do not add outside knowledge.
+- Do **not** generalize to what the organization/website “typically provides” unless the page explicitly states it.
+- Base importance strictly on: **(1) visible prominence**, **(2) repetition/emphasis**, **(3) explicit conclusions/purpose**.
+- Match the source’s specificity: if the page lists items, keep key items; if the page is conceptual, summarize conceptually.
+- Do not “force” a single narrative when the page is a feed/index with multiple unrelated items.
 
 ## Length Target (Adaptive)
 Choose a target length based on page type and content length, while staying under 250 words:
@@ -44,7 +54,7 @@ Choose a target length based on page type and content length, while staying unde
 - **Long docs or dense pages:** ~200-250 words.
 
 ## Page-Type Handling (Required)
-First infer the page type and summarize accordingly:
+First classify the page into **exactly one** of these types (do not invent new categories) and summarize accordingly:
 - **Article/essay:** central thesis + key arguments + conclusion.
 - **Homepage/feed/index:** digest the most important items; **do not force one narrative**.
 - **Docs/reference:** purpose + key sections/concepts + how to use (if applicable).
@@ -94,12 +104,14 @@ function buildCompactPrompt(content, language) {
   return `
 Summarize the webpage content below in ${language}.
 
-Rules:
-- Max 180 words.
+Rules (Strict):
+- Max 250 words.
 - Output only bullet points starting with '-'.
 - No headings, labels, preambles, or closing remarks.
 - No follow-up questions or offers to help.
-- Focus on the core facts, intent, and any critical numbers or dates.
+- Summarize only what is present in the provided content (no outside knowledge).
+- Do not generalize what the site/organization “typically provides” unless explicitly stated in the content.
+- Focus on prominently displayed content, repeated/emphasized points, and explicit conclusions.
 - Preserve mathematical expressions in LaTeX using $...$ or $$...$$.
 
 Page Content:
