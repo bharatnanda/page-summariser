@@ -69,9 +69,24 @@ async function saveExtractedContentForDebug(content, meta) {
  */
 function buildCacheKey(pageURL, settings) {
   const provider = settings?.provider || "";
-  const model = settings?.model || "";
+  const modelOrDeployment = provider === "azure"
+    ? (settings?.deployment || settings?.model || "")
+    : (settings?.model || "");
   const language = settings?.language || "";
-  return [pageURL || "", provider, model, language].join("|");
+  const promptProfile = settings?.promptProfile || "";
+  const maxContentChars = Number.isFinite(Number(settings?.maxContentChars))
+    ? String(Number(settings?.maxContentChars))
+    : "";
+  const apiVersion = provider === "azure" ? (settings?.apiVersion || "") : "";
+  return [
+    pageURL || "",
+    provider,
+    modelOrDeployment,
+    apiVersion,
+    language,
+    promptProfile,
+    maxContentChars
+  ].join("|");
 }
 
 /**

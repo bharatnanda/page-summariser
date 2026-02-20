@@ -18,12 +18,14 @@ async function run() {
   const key = summarySession.buildCacheKey('https://example.com', {
     provider: 'openai',
     model: 'gpt',
-    language: 'english'
+    language: 'english',
+    promptProfile: 'default',
+    maxContentChars: 60000
   });
   assertEqual(
     key,
-    'https://example.com|openai|gpt|english',
-    'Cache key should include url, provider, model, language'
+    'https://example.com|openai|gpt||english|default|60000',
+    'Cache key should include url, provider, model/deployment, apiVersion (if azure), language, promptProfile, maxContentChars'
   );
 
   // Check cache handling with preloaded cache

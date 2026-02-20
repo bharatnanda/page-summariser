@@ -64,6 +64,7 @@ export async function getSettings() {
     model: settings.model || ""
   };
 
+  const language = (settings.language || "").trim() || "english";
   return {
     provider,
     apiKey: (providerApiKeysLocal[provider] || (syncApiKeys ? (providerApiKeysSync[provider] || resolved.apiKey || "") : "") || "").trim(),
@@ -71,7 +72,7 @@ export async function getSettings() {
     deployment: (resolved.deployment || "").trim(),
     apiVersion: (resolved.apiVersion || "").trim(),
     model: (resolved.model || "").trim(),
-    language: (settings.language || "").trim(),
+    language,
     promptProfile: settings.promptProfile === "compact" ? "compact" : "default",
     useExtractionEngine: Boolean(settings.useExtractionEngine),
     maxContentChars: Number.isFinite(Number(settings.maxContentChars)) && Number(settings.maxContentChars) > 0

@@ -10,6 +10,7 @@ async function run() {
   assertEqual(fresh.defaultBlacklistedUrls, DEFAULT_BLACKLIST, 'Default blacklist should be seeded on first run');
   assert(store.sync.defaultBlacklistedUrls, 'Default blacklist should be stored in sync');
   assertEqual(store.sync.defaultBlacklistInitialized, true, 'Default blacklist initialization flag should be set');
+  assertEqual(fresh.language, 'english', 'Default language should be english when not set');
 
   // Existing custom default should be preserved
   store.sync.defaultBlacklistedUrls = 'example.com';
