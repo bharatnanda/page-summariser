@@ -32,7 +32,10 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
    - **Chrome/Edge**: open `chrome://extensions` or `edge://extensions`, enable Developer mode, click “Load unpacked”, choose `dist/chrome/`
    - **Firefox**: open `about:debugging#/runtime/this-firefox`, click “Load Temporary Add‑on…”, choose any file inside `dist/firefox/`
    - **Safari**: convert `dist/safari/` using `safari-web-extension-converter` and build/run in Xcode (steps below)
-
+4. Also available of Chrome Web Store and Mozilla Addons Store
+   - **Chrome / Edge**: [Chrome Web Store – Page Summarizer](https://chromewebstore.google.com/detail/page-summarizer/ehnjnlmphpcoijjahimaggoccnjdhaml)
+   - **Firefox**: [Mozilla Add-ons – Page Summarizer Extension](https://addons.mozilla.org/en-US/firefox/addon/page-summarizer-extension/)
+   
 ## Supported AI Providers
 
 ### OpenAI
