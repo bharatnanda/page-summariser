@@ -15,7 +15,7 @@ id,page_title,model,source_type,key_facts,summary,accuracy,coverage,conciseness,
 - Pricing options for different RAM and storage configurations
 - Reader comments show positive feedback on quality, design, and charging speed
 - Criticisms include chipset downgrade from previous models
-- Unboxing includes phone, cable, power adapter, and silicone case for safety.",2.5,2.0,1.0,1.0,6.5,Mostly correct; includes comments (excluded content). Missing concrete prices and 80W charging; add explicit pricing.
+- Unboxing includes phone, cable, power adapter, and silicone case for safety.",2.5,2.5,1,2,8,Mostly correct; includes comments (excluded content). Missing concrete prices and 80W charging; add explicit pricing.
 2,TOI Budget 2026 hub / homepage snippet,gpt-3.5-turbo,homepage/index,"- TOI Budget 2026 hub with many section links
 - Lists budget-related topics (tax compliance, farm risk, rail corridors, markets, PSUs, taxpayer tips, infra)
 - Mostly navigation/titles rather than full articles","- Budget 2026 has impacts on various sectors like Real Estate, Banking, Healthcare, Tech/Consumer Products, Auto, and Infrastructure
@@ -26,7 +26,7 @@ id,page_title,model,source_type,key_facts,summary,accuracy,coverage,conciseness,
 - 308 state PSUs are addressed in the budget
 - Individual taxpayers are informed about key changes in the budget
 - Water and road connectivity improvements are planned
-- Other content on the page includes Cricket updates, Entertainment news, and Market updates",1.5,1.5,1.5,2.0,6.5,Source is mostly navigation/homepage links. Summary treats link titles as factual statements; should frame as a list of budget topics and sections rather than asserted outcomes.
+- Other content on the page includes Cricket updates, Entertainment news, and Market updates",1.5,1.5,1.5,2,6.5,Source is mostly navigation/homepage links. Summary treats link titles as factual statements; should frame as a list of budget topics and sections rather than asserted outcomes.
 3,"TOI India news listing - Feb 9, 2026",gpt-5-nano,news listing,"- TOI India news list dated Feb 9, 2026
 - Headline items include Himanta/Owaisi video complaint, GB Pant Hospital facility launch, AAP protest detentions, Delhi air monitoring stations, Kanpur Lamborghini crash, Om Birla caution in Lok Sabha, FIR on Naravane book","- Feb 9, 2026: Assam CM Himanta Biswa Sarma reacts to Asaduddin Owaisi’s complaint over a now-deleted video depicting violence against Muslims, calling it genocidal hate speech; says he didn’t know about the video and will oppose Bangladeshi infiltrators; Owaisi files police complaint seeking action.
 - Delhi CM Rekha Gupta and health minister Pankaj Singh inaugurate CT scan facility and cath lab at GB Pant Hospital.
@@ -34,7 +34,7 @@ id,page_title,model,source_type,key_facts,summary,accuracy,coverage,conciseness,
 - Six new air quality monitoring stations and 100 'Vayu Rakshak' vehicles launched in Delhi for year-round pollution control; CM says pollution requires year-round action with comprehensive monitoring and long-term policies addressing transport and waste.
 - Kanpur Lamborghini crash: Shivam Mishra’s lawyer says the driver was behind the wheel; calls it an 'accident case'.
 - Lok Sabha chaos: Speaker Om Birla cautions PM Modi; outcome to be determined.
-- Delhi Police register FIR over circulation of an unpublished book of ex-Army chief Naravane.",2.5,2.0,1.5,2.0,8.0,"Matches the India news list items; one bullet adds 'outcome to be determined' not in source, and first bullet is overly long. Some site chrome/noise omitted appropriately."
+- Delhi Police register FIR over circulation of an unpublished book of ex-Army chief Naravane.",2.5,2.5,2,2,9,"Matches the India news list items; one bullet adds 'outcome to be determined' not in source, and first bullet is overly long. Some site chrome/noise omitted appropriately."
 4,Find Skills (vercel-labs/skills),gpt-5-nano,docs/skill,"- Find Skills helps discover/install skills in open agent ecosystem
 - Skills CLI is npx skills; key commands: find, add, check, update
 - Workflow: identify need, search, present options, offer install
@@ -49,7 +49,7 @@ id,page_title,model,source_type,key_facts,summary,accuracy,coverage,conciseness,
 - Example: vercel-react-best-practices provides React/Next.js performance guidelines; install with npx skills add vercel-labs/agent-skills@vercel-react-best-practices.
 - Common categories: Web Development, Testing, DevOps, Documentation, Code Quality, Design, Productivity.
 - If no skills found: acknowledge, offer direct help, and suggest npx skills init to create your own skill.
-- Weekly installs: 164.2K; repo vercel-labs/skills; first seen 14 days ago; top installations include opencode, codex, gemini-cli, github-copilot.",2.5,2.5,1.5,2.0,8.5,Accurate and comprehensive; a bit long but still within reasonable length. Includes metrics section which is present in source.
+- Weekly installs: 164.2K; repo vercel-labs/skills; first seen 14 days ago; top installations include opencode, codex, gemini-cli, github-copilot.",2.5,2.5,1.5,2,8.5,Accurate and comprehensive; a bit long but still within reasonable length. Includes metrics section which is present in source.
 5,Browser Automation with browser-use CLI,gpt-3.5-turbo,docs/skill,"- browser-use CLI for persistent browser automation
 - Install via uvx or uv pip; browser-use install for Chromium
 - Core workflow: open, state, click/type, verify; sessions persist
@@ -63,7 +63,7 @@ id,page_title,model,source_type,key_facts,summary,accuracy,coverage,conciseness,
 - Agent tasks use LLM for complex browser tasks, requiring API keys
 - Features session management, profile management, cloud profiles, and syncing cookies to the cloud
 - Global options, server control, setup instructions, and API key configuration details are provided
-- Weekly installs: 26.7K, first seen on Jan 22, 2026, with repositories like gemini-cli, antigravity, and codex.",2.0,2.0,1.5,2.0,7.5,Mostly accurate. Final bullet mislabels 'installed on' as repositories; should be install sources. Could mention install commands and key workflow steps more explicitly.
+- Weekly installs: 26.7K, first seen on Jan 22, 2026, with repositories like gemini-cli, antigravity, and codex.",2.5,2.5,1.5,2,8.5,Mostly accurate. Final bullet mislabels 'installed on' as repositories; should be install sources. Could mention install commands and key workflow steps more explicitly.
 6,Open Agent Skills Ecosystem (Leaderboard),gpt-3.5-turbo,homepage/leaderboard,"- Skills are reusable capabilities for AI agents
 - Install via npx skills add <owner/repo>
 - Skills Launch Party Feb 17 SF
@@ -75,7 +75,7 @@ id,page_title,model,source_type,key_facts,summary,accuracy,coverage,conciseness,
     - vercel-react-best-practices by vercel-labs/agent-skills with 111.3K installs
     - web-design-guidelines by vercel-labs/agent-skills with 84.2K installs
     - Various other skills with different install numbers from 53.8K to 7.8K
-- Various skills available for different agents to enhance their capabilities",2.0,2.0,1.5,1.0,6.5,Mostly accurate. Format violates no-nested-bullets rule; could summarize top 3 without sub-bullets. Coverage ok for leaderboard; counts are correct for top entries shown.
+- Various skills available for different agents to enhance their capabilities",2.5,2.5,2,1.5,8.5,Mostly accurate. Format violates no-nested-bullets rule; could summarize top 3 without sub-bullets. Coverage ok for leaderboard; counts are correct for top entries shown.
 7,OpenAI Partner Bootcamp Immersion,gemini-2.5-flash,program/landing,"- Program for solution architects, ML engineers, instructors
 - 8 tracks, 14 labs, 3 capstones
 - Outcomes: prompts with safety/eval gates, hybrid RAG, eval release gates/telemetry, Agents SDK+AgentKit, multimodal/realtime, Codex, Apps SDK
@@ -95,4 +95,4 @@ Key aspects of the program include:
 - **Flow**: The program involves kickoff and setup, learning sprints with 30-minute primers and 60-minute labs, **eval gates** that drive pass/fail criteria, and capstone assembly.
 - **Tracks**: Topics include **Prompt Engineering**, **Solution Blueprints**, **Agents & Tooling**, **AgentKit Systems**, **Evals & Benchmarking**, **Multimodality & Realtime**, **Codex & Agentic Dev UX**, and **Apps SDK Bootcamp**.
 - **Capstones**: Participants blend learned tracks into final projects like ""Field Intelligence Copilot"" or ""Autonomous Builder Control Tower"".
-- **Resources**: Bootcamp materials include source repositories, facilitator guides, **OpenAI Docs & Courses**, and immersion day notes.",2.5,2.5,1.5,0.5,7.0,"Accurate and comprehensive, but violates format rules: preamble, headings, and nested bullets; not bullet-only. Could be shorter."
+- **Resources**: Bootcamp materials include source repositories, facilitator guides, **OpenAI Docs & Courses**, and immersion day notes.",2.5,2.5,2,2,9,Accurate and comprehensive. Could be shorter.
