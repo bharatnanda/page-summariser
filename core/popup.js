@@ -1,4 +1,3 @@
-import { getPageContent } from './utils/contentExtractor.js';
 import { showNotification } from './utils/notification.js';
 import { platform } from './platform.js';
 
@@ -27,23 +26,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         summarizeBtn.textContent = "Loading...";
       }
       summarizeBtn.disabled = true;
-      
-      const pageData = await getPageContent();
-      if (!pageData?.content) {
-        throw new Error("No content found on this page. Please try another page.");
-      }
-      const pageURL = pageData.sourceUrl || "";
 
       const response = await platform.runtime.sendMessage({
-        action: "streamSummary",
-        content: pageData.content,
-        pageURL,
-        title: pageData.title,
-        incrementCounter: true,
-        cacheKey: pageURL
+        action: "summarize",
+        incrementCounter: true
       });
       if (response?.status === "error") {
-        throw new Error(response.message || "Failed to start streaming summary.");
+        throw new Error(response.message || "Failed to start summarization.");
       }
 
     } catch (err) {
