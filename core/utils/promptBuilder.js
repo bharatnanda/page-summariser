@@ -66,6 +66,11 @@ First infer the page type and summarize accordingly:
 - Include snippets only if they add clear value.
 - Note warnings/best practices if mentioned.
 
+### If the page includes mathematical expressions
+- Render all formulas and equations using LaTeX notation.
+- Use $...$ for inline math and $$...$$ on its own line for block/display math.
+- Example: inline → $\theta_{new} = \theta_{old} - \alpha \nabla L(\theta)$; block → $$E = mc^2$$
+
 ## What to Exclude (Strict)
 - Navigation menus, headers/footers, ads, pop-ups, cookie banners, scripts/analytics.
 - Author bios, comments, social embeds, newsletter signups, unrelated promos.
@@ -99,6 +104,7 @@ Rules:
 - No headings, labels, preambles, or closing remarks.
 - No follow-up questions or offers to help.
 - Focus on the core facts, intent, and any critical numbers or dates.
+- If the page contains math, render formulas in LaTeX: $...$ for inline, $$...$$ for block.
 
 Page Content:
 ${content}
