@@ -52,6 +52,52 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
   }
 
+  // Register marked extensions to render math before markdown processes underscores/asterisks.
+  // This must run once; guard against repeated DOMContentLoaded re-registration.
+  if (window.marked && window.katex && !marked._mathExtensionRegistered) {
+    marked._mathExtensionRegistered = true;
+    marked.use({
+      extensions: [
+        {
+          name: 'blockMath',
+          level: 'block',
+          start(src) { return src.indexOf('$$'); },
+          tokenizer(src) {
+            const match = src.match(/^\$\$([\s\S]+?)\$\$/);
+            if (match) {
+              return { type: 'blockMath', raw: match[0], text: match[1] };
+            }
+          },
+          renderer(token) {
+            try {
+              return katex.renderToString(token.text, { displayMode: true, throwOnError: false });
+            } catch (e) {
+              return `<pre>$$${token.text}$$</pre>`;
+            }
+          }
+        },
+        {
+          name: 'inlineMath',
+          level: 'inline',
+          start(src) { return src.indexOf('$'); },
+          tokenizer(src) {
+            const match = src.match(/^\$([^$\n]+?)\$/);
+            if (match) {
+              return { type: 'inlineMath', raw: match[0], text: match[1] };
+            }
+          },
+          renderer(token) {
+            try {
+              return katex.renderToString(token.text, { displayMode: false, throwOnError: false });
+            } catch (e) {
+              return `<code>$${token.text}$</code>`;
+            }
+          }
+        }
+      ]
+    });
+  }
+
   /**
    * Render markdown or plain text summary.
    * @param {string} text
@@ -71,11 +117,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
       container.textContent = text;
     }
+    // Handle \(...\) and \[...\] delimiters not covered by the marked extension.
     if (window.renderMathInElement) {
       renderMathInElement(container, {
         delimiters: [
-          { left: "$$", right: "$$", display: true },
-          { left: "$", right: "$", display: false },
           { left: "\\(", right: "\\)", display: false },
           { left: "\\[", right: "\\]", display: true }
         ],
