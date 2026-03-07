@@ -17,6 +17,7 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
 - **Content Extraction**: Automatically extracts text content from web pages
 - **Smart Summarization**: Generates concise, well-structured summaries
 - **Streaming Summaries**: Watch summaries appear in real time for supported providers
+- **Math Rendering**: Renders LaTeX formulas in summaries using KaTeX (supports `$...$`, `$$...$$`, `\(...\)`, `\[...\]`)
 - **History Tracking**: Keeps track of your previous summaries
 - **Caching**: Caches summaries for 30 minutes to reduce API usage
 - **Domain Blacklisting**: Prevents summarization on restricted domains with a comprehensive default list for security and privacy
@@ -298,4 +299,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - Thanks to all AI providers for their powerful APIs
+- [KaTeX](https://katex.org) (MIT License) — fast math rendering in summary results
 - Special thanks to the open-source community for various libraries used

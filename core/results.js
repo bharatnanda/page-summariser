@@ -38,8 +38,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const renderer = window.marked ? new marked.Renderer() : null;
   if (renderer) {
-    renderer.html = (text) => escapeHtml(text);
-    renderer.link = (href, title, text) => {
+    // marked v15 passes a token object instead of individual arguments
+    renderer.html = ({ text }) => escapeHtml(text);
+    renderer.link = ({ href, title, tokens }) => {
+      const text = tokens.reduce((acc, t) => acc + (t.text || t.raw || ""), "");
       const safeHref = isSafeLink(href) ? href : "";
       const safeText = escapeHtml(text);
       if (!safeHref) {
@@ -58,9 +60,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (window.marked) {
       const html = marked.parse(text, {
         breaks: true,
-        renderer,
-        mangle: false,
-        headerIds: false
+        renderer
       });
       const parsed = new DOMParser().parseFromString(html, "text/html");
       const fragment = document.createDocumentFragment();
@@ -70,6 +70,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       container.replaceChildren(fragment);
     } else {
       container.textContent = text;
+    }
+    if (window.renderMathInElement) {
+      renderMathInElement(container, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false },
+          { left: "\\(", right: "\\)", display: false },
+          { left: "\\[", right: "\\]", display: true }
+        ],
+        throwOnError: false
+      });
     }
     updateWordCount(text);
   }
