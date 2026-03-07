@@ -102,6 +102,30 @@ export function extractPageData(useExtractionEngine = true) {
       if (root instanceof Element) {
         const clone = root.cloneNode(true);
         clone.querySelectorAll?.(JUNK_SEL)?.forEach((n) => n.remove());
+
+        // Replace MathJax/KaTeX rendered elements with their original LaTeX source.
+        // Both store the source in <annotation encoding="application/x-tex">.
+        const getLatex = (el) =>
+          el.querySelector?.('annotation[encoding="application/x-tex"]')?.textContent?.trim() || '';
+        // MathJax v3 (<mjx-container>)
+        clone.querySelectorAll?.('mjx-container').forEach((el) => {
+          const latex = getLatex(el);
+          const display = el.getAttribute('display') === 'true';
+          el.replaceWith(latex ? (display ? `$$${latex}$$` : `$${latex}$`) : '');
+        });
+        // KaTeX (<span class="katex">)
+        clone.querySelectorAll?.('.katex').forEach((el) => {
+          const latex = getLatex(el);
+          el.replaceWith(latex ? `$${latex}$` : '');
+        });
+        // MathJax v2 (<script type="math/tex">)
+        clone.querySelectorAll?.('script[type="math/tex"]').forEach((el) => {
+          el.replaceWith(`$${el.textContent.trim()}$`);
+        });
+        clone.querySelectorAll?.('script[type="math/tex; mode=display"]').forEach((el) => {
+          el.replaceWith(`$$${el.textContent.trim()}$$`);
+        });
+
         workRoot = clone;
       }
       const blocks = [];

@@ -66,6 +66,12 @@ First infer the page type and summarize accordingly:
 - Include snippets only if they add clear value.
 - Note warnings/best practices if mentioned.
 
+### If the page includes mathematical expressions
+- **Always convert** any mathematical notation to LaTeX — including formulas, equations, and expressions written with Unicode symbols (e.g. θ, α, ∇, ∑, subscripts, superscripts).
+- Use $...$ for inline math and $$...$$ (on its own line) for block/display math.
+- **Only use $ and $$ as delimiters.** Do NOT use ( ), \( \), [ ], or any other notation.
+- Never write math as plain text or Unicode. Example: write $\theta_{new} = \theta_{old} - \alpha \nabla L(\theta)$ not θ_new = θ_old − α ∇L(θ).
+
 ## What to Exclude (Strict)
 - Navigation menus, headers/footers, ads, pop-ups, cookie banners, scripts/analytics.
 - Author bios, comments, social embeds, newsletter signups, unrelated promos.
@@ -99,6 +105,7 @@ Rules:
 - No headings, labels, preambles, or closing remarks.
 - No follow-up questions or offers to help.
 - Focus on the core facts, intent, and any critical numbers or dates.
+- If the page contains math, **always convert** all formulas and Unicode math symbols to LaTeX: $...$ for inline, $$...$$ for block. Use **only $ and $$** as delimiters — never ( ), \( \), [ ], or plain text.
 
 Page Content:
 ${content}

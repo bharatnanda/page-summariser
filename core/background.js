@@ -5,6 +5,7 @@ import { platform } from './platform.js';
 import { summarySession } from './utils/summarySession.js';
 import { DEFAULT_BLACKLIST } from './utils/defaultBlacklist.js';
 import { buildToastStyle } from './utils/notification.js';
+import { combineBlacklists, isDomainBlacklisted } from './utils/domainBlacklist.js';
 
 const activeStreams = new Map();
 
@@ -58,6 +59,59 @@ function sendStreamMessage(streamId, message) {
   } else {
     stream.buffer.push(message);
   }
+}
+
+/**
+ * Orchestrate a full summarization for a tab:
+ *   domain check → cache check → content extraction → stream.
+ * Throws for fast-fail errors (domain blocked, no content) so callers can surface them.
+ * Streaming is fired without awaiting — streaming errors are shown as in-page toasts.
+ * @param {any} tab
+ * @param {{ incrementCounter: boolean }} options
+ * @returns {Promise<void>}
+ */
+async function handleSummarizeTab(tab, { incrementCounter }) {
+  if (!tab?.id) throw new Error("No active tab found. Please try again.");
+
+  const settings = await getSettings();
+  const pageURL = tab.url || '';
+
+  // 1. Domain check — no network or script injection needed
+  const combinedBlacklist = combineBlacklists(
+    settings.defaultBlacklistedUrls,
+    settings.blacklistedUrls
+  );
+  if (isDomainBlacklisted(combinedBlacklist, pageURL)) {
+    throw new Error("This is a restricted domain. Summarization is not allowed on this site.");
+  }
+
+  // 2. Cache check — storage lookup only, no script injection
+  const resolvedCacheKey = summarySession.buildCacheKey(pageURL, settings);
+  const cached = await summarySession.checkCache({ cacheKey: resolvedCacheKey, incrementCounter });
+  if (cached.handled) return;
+
+  // 3. Content extraction — only now inject script into the page
+  const results = await platform.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: extractPageData,
+    args: [Boolean(settings.useExtractionEngine)]
+  });
+  const result = results?.[0]?.result;
+  const pageText = result?.text || '';
+  const pageTitle = result?.title || '';
+  if (!pageText || !pageText.trim()) {
+    throw new Error("No content found on this page. Please try another page.");
+  }
+
+  // 4. Start streaming — fire and forget; errors handled internally.
+  startSummaryStream({
+    content: buildContentFromText(pageText),
+    pageURL,
+    title: pageTitle,
+    incrementCounter,
+    resolvedCacheKey,
+    settings
+  });
 }
 
 async function showInPageToast(message, type = "info") {
@@ -144,32 +198,10 @@ platform.runtime.onInstalled.addListener(async () => {
   clearExpiredCache();
 });
 
-// When menu item is clicked, extract text from the active tab
-platform.contextMenus.onClicked.addListener(async (info, tab) => {
+// When menu item is clicked, summarize the active tab
+platform.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "summarizePage") {
-    const settings = await getSettings();
-    platform.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: extractPageData,
-      args: [Boolean(settings.useExtractionEngine)]
-    }).then(async (results) => {
-      const result = results?.[0]?.result;
-      const pageURL = tab.url || '';
-      const pageText = result?.text || '';
-      const pageTitle = result?.title || '';
-      if (!pageText || !pageText.trim()) {
-        throw new Error("No content found on this page. Please try another page.");
-      }
-
-      const content = buildContentFromText(pageText);
-      await startSummaryStream({
-        content,
-        pageURL,
-        title: pageTitle,
-        incrementCounter: false,
-        cacheKey: null
-      });
-    }).catch(err => {
+    handleSummarizeTab(tab, { incrementCounter: false }).catch((err) => {
       console.error("Failed to summarize page:", err);
       showInPageToast(err.message || 'Failed to summarize this page. Please try again or use the popup instead.', 'error');
     });
@@ -177,16 +209,17 @@ platform.contextMenus.onClicked.addListener(async (info, tab) => {
 });
 
 platform.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.action !== "streamSummary") return;
-  startSummaryStream({
-    content: message.content,
-    pageURL: message.pageURL,
-    title: message.title || "",
-    incrementCounter: Boolean(message.incrementCounter),
-    cacheKey: message.cacheKey || null
-  })
-    .then((streamId) => sendResponse({ status: "started", streamId }))
-    .catch((error) => sendResponse({ status: "error", message: error.message }));
+  if (message?.action !== "summarize") return;
+  (async () => {
+    try {
+      const [tab] = await platform.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id) throw new Error("No active tab found. Please try again.");
+      await handleSummarizeTab(tab, { incrementCounter: Boolean(message.incrementCounter) });
+      sendResponse({ status: "started" });
+    } catch (err) {
+      sendResponse({ status: "error", message: err.message });
+    }
+  })();
   return true;
 });
 
@@ -203,20 +236,11 @@ platform.alarms.onAlarm.addListener((alarm) => {
 
 /**
  * Start a summary stream and open the results page.
- * @param {{ content: string, pageURL: string, title: string, incrementCounter: boolean, cacheKey: string | null }} args
+ * @param {{ content: string, pageURL: string, title: string, incrementCounter: boolean, resolvedCacheKey: string | null, settings: object }} args
  * @returns {Promise<string>}
  */
-async function startSummaryStream({ content, pageURL, title, incrementCounter, cacheKey }) {
-  const settings = await getSettings();
+async function startSummaryStream({ content, pageURL, title, incrementCounter, resolvedCacheKey, settings }) {
   const disableStreaming = Boolean(settings.disableStreamingOnSafari);
-  const resolvedCacheKey = cacheKey
-    ? summarySession.buildCacheKey(cacheKey, settings)
-    : null;
-
-  const cached = await summarySession.checkCache({ cacheKey: resolvedCacheKey, incrementCounter });
-  if (cached.handled) {
-    return null;
-  }
 
   if (disableStreaming) {
     try {

@@ -1,0 +1,17 @@
+{
+  "name": "page-summariser-evals",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "score": "node eval_runner.js",
+    "draft-facts": "node eval_runner.js --stage draft-facts",
+    "fetch": "node eval_runner.js --stage fetch",
+    "generate": "node eval_runner.js --stage generate",
+    "report": "node eval_runner.js --stage report",
+    "all": "node eval_runner.js --stage all",
+    "optimize": "node eval_runner.js --optimize"
+  },
+  "dependencies": {
+    "playwright": "^1.50.0"
+  }
+}

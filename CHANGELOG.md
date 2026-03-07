@@ -1,3 +1,7 @@
+# **Changelog 1.1.1**
+- **Math Rendering**: Renders LaTeX formulas in summaries using KaTeX — supports inline (`$...$`, `\(...\)`) and block (`$$...$$`, `\[...\]`) expressions
+- **Bug Fixes**: Fixed formula rendering edge cases and improved LaTeX prompt handling for AI providers
+
 # **Changelog 1.1.0**
 
 - Added streaming summaries for OpenAI, Azure, Gemini, and Ollama with shared stream parsing helpers.  
