@@ -103,6 +103,12 @@ document.addEventListener("DOMContentLoaded", async () => {
    * @param {string} text
    */
   function renderSummary(text) {
+    // Normalize alternate math delimiters to $...$ / $$...$$ so the marked
+    // extension handles them before markdown processes underscores/asterisks.
+    // \[...\] → $$...$$, \(...\) → $...$
+    text = text
+      .replace(/\\\[([\s\S]+?)\\\]/g, (_, m) => `$$${m}$$`)
+      .replace(/\\\(([^)]+?)\\\)/g, (_, m) => `$${m}$`);
     if (window.marked) {
       const html = marked.parse(text, {
         breaks: true,
