@@ -1,7 +1,6 @@
 import { getSettings } from './settings.js';
 import { buildSummarizationPrompt, clampContentForProvider } from './promptBuilder.js';
 import { fetchSummary, fetchSummaryStream } from './apiClient.js';
-import { combineBlacklists, isDomainBlacklisted } from './domainBlacklist.js';
 import { saveSummaryForView } from './summaryStore.js';
 import { addHistoryItem, createHistoryItem } from './historyStore.js';
 import { cacheSummary, getCachedSummary } from './cache.js';
@@ -89,15 +88,6 @@ async function saveToHistory(url, summary, title, meta = {}) {
 async function generateSummary(content, pageURL, options = {}) {
   const { onDelta, signal } = options;
   const settings = await getSettings();
-
-  const combinedBlacklist = combineBlacklists(
-    settings.defaultBlacklistedUrls,
-    settings.blacklistedUrls
-  );
-
-  if (isDomainBlacklisted(combinedBlacklist, pageURL)) {
-    throw new Error("This is a restricted domain. Summarization is not allowed on this site.");
-  }
 
   if (!content) {
     throw new Error("No content found on this page. Please try another page.");

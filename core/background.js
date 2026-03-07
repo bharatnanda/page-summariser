@@ -104,13 +104,13 @@ async function handleSummarizeTab(tab, { incrementCounter }) {
   }
 
   // 4. Start streaming — fire and forget; errors handled internally.
-  // Pass resolvedCacheKey directly to skip rebuilding and re-checking it in startSummaryStream.
   startSummaryStream({
     content: buildContentFromText(pageText),
     pageURL,
     title: pageTitle,
     incrementCounter,
-    resolvedCacheKey
+    resolvedCacheKey,
+    settings
   });
 }
 
@@ -236,24 +236,11 @@ platform.alarms.onAlarm.addListener((alarm) => {
 
 /**
  * Start a summary stream and open the results page.
- * @param {{ content: string, pageURL: string, title: string, incrementCounter: boolean, cacheKey?: string | null, resolvedCacheKey?: string | null }} args
+ * @param {{ content: string, pageURL: string, title: string, incrementCounter: boolean, resolvedCacheKey: string | null, settings: object }} args
  * @returns {Promise<string>}
  */
-async function startSummaryStream({ content, pageURL, title, incrementCounter, cacheKey, resolvedCacheKey: preResolvedKey }) {
-  const settings = await getSettings();
+async function startSummaryStream({ content, pageURL, title, incrementCounter, resolvedCacheKey, settings }) {
   const disableStreaming = Boolean(settings.disableStreamingOnSafari);
-
-  // Use a pre-resolved key from the caller (already checked) or build and check now.
-  const resolvedCacheKey = preResolvedKey !== undefined
-    ? preResolvedKey
-    : (cacheKey ? summarySession.buildCacheKey(cacheKey, settings) : null);
-
-  if (preResolvedKey === undefined) {
-    const cached = await summarySession.checkCache({ cacheKey: resolvedCacheKey, incrementCounter });
-    if (cached.handled) {
-      return null;
-    }
-  }
 
   if (disableStreaming) {
     try {
