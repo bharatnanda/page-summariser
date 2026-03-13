@@ -1,6 +1,7 @@
 import { loadSummaryForView } from './utils/summaryStore.js';
 import { showNotification } from './utils/notification.js';
 import { platform } from './platform.js';
+import { TTSPlayer, formatTime } from './utils/tts.js';
 
 /**
  * Escape HTML to prevent rendering raw markup in the summary view.
@@ -27,6 +28,102 @@ document.addEventListener("DOMContentLoaded", async () => {
   const articleSource = document.getElementById("articleSource");
   const articleProviderModel = document.getElementById("articleProviderModel");
   const summaryMetrics = document.getElementById("summaryMetrics");
+
+  // TTS elements
+  const ttsListenBtn = document.getElementById("ttsListenBtn");
+  const ttsPlayer = document.getElementById("ttsPlayer");
+  const ttsPlayPause = document.getElementById("ttsPlayPause");
+  const ttsPlayIcon = document.getElementById("ttsPlayIcon");
+  const ttsPauseIcon = document.getElementById("ttsPauseIcon");
+  const ttsTime = document.getElementById("ttsTime");
+  const ttsProgressFill = document.getElementById("ttsProgressFill");
+  const ttsProgressBar = document.getElementById("ttsProgressBar");
+  const ttsSpeed = document.getElementById("ttsSpeed");
+  const ttsClose = document.getElementById("ttsClose");
+
+  // Read TTS setting directly from storage (avoids pulling in full settings/migrations machinery).
+  const ttsStorageResult = await platform.storage.get('sync', ['ttsSpeakOnStream']);
+  const ttsSpeakOnStream = Boolean(ttsStorageResult?.ttsSpeakOnStream);
+
+  const tts = new TTSPlayer();
+
+  /** Show/hide the player bar and sync play/pause icon. */
+  function showPlayer() {
+    if (ttsPlayer) ttsPlayer.hidden = false;
+  }
+
+  function syncPlayPauseIcon(state) {
+    if (!ttsPlayIcon || !ttsPauseIcon) return;
+    ttsPlayIcon.hidden = state === "playing";
+    ttsPauseIcon.hidden = state !== "playing";
+    if (ttsPlayPause) {
+      ttsPlayPause.setAttribute("aria-label", state === "playing" ? "Pause" : "Play");
+    }
+  }
+
+  tts.onStateChange = (state) => {
+    syncPlayPauseIcon(state);
+    if (state === "idle") {
+      if (ttsProgressFill) ttsProgressFill.style.width = "100%";
+    }
+  };
+
+  tts.onTick = (elapsed, fraction) => {
+    if (ttsTime) ttsTime.textContent = formatTime(elapsed);
+    if (ttsProgressFill) ttsProgressFill.style.width = `${Math.round(fraction * 100)}%`;
+    if (ttsProgressBar) ttsProgressBar.setAttribute("aria-valuenow", Math.round(fraction * 100));
+  };
+
+  tts.onEnd = () => {
+    if (ttsTime) ttsTime.textContent = "0:00";
+    if (ttsProgressFill) ttsProgressFill.style.width = "0%";
+    syncPlayPauseIcon("idle");
+  };
+
+  if (ttsListenBtn) {
+    // Hide the button entirely if Web Speech API is not available.
+    if (!tts.supported) {
+      ttsListenBtn.hidden = true;
+    } else {
+      ttsListenBtn.addEventListener("click", () => {
+        if (ttsPlayer && !ttsPlayer.hidden) {
+          // Player already visible — just focus it.
+          ttsPlayPause?.focus();
+          return;
+        }
+        showPlayer();
+        tts.speakAll(decodedText);
+      });
+    }
+  }
+
+  if (ttsPlayPause) {
+    ttsPlayPause.addEventListener("click", () => {
+      if (tts.state === "playing") {
+        tts.pause();
+      } else if (tts.state === "paused") {
+        tts.resume();
+      } else {
+        // Restarted after end
+        tts.speakAll(decodedText);
+      }
+    });
+  }
+
+  if (ttsSpeed) {
+    ttsSpeed.addEventListener("change", () => {
+      tts.setRate(Number(ttsSpeed.value));
+    });
+  }
+
+  if (ttsClose) {
+    ttsClose.addEventListener("click", () => {
+      tts.stop();
+      if (ttsPlayer) ttsPlayer.hidden = true;
+      if (ttsProgressFill) ttsProgressFill.style.width = "0%";
+      if (ttsTime) ttsTime.textContent = "0:00";
+    });
+  }
 
   // Get summary text from URL query params
   const params = new URLSearchParams(window.location.search);
@@ -185,15 +282,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!streamId) {
     renderSummary(decodedText);
     renderMeta(summaryMeta);
+    // Summary already complete — enable Listen button immediately.
+    if (ttsListenBtn && tts.supported) ttsListenBtn.disabled = false;
   }
 
   if (streamId) {
+    // In streaming mode: Listen button is disabled until the stream is done
+    // (unless ttsSpeakOnStream is on, in which case TTS auto-starts on first delta).
     const port = platform.runtime.connect({ name: `summaryStream:${streamId}` });
     port.onMessage.addListener((message) => {
       if (!message) return;
       if (message.type === "delta") {
         decodedText = `${decodedText}${message.delta}`;
         renderSummary(decodedText);
+        if (ttsSpeakOnStream && tts.supported) {
+          // Show player and feed growing text; TTSPlayer queues complete sentences.
+          showPlayer();
+          tts.appendText(decodedText);
+        }
         return;
       }
       if (message.type === "done") {
@@ -214,11 +320,17 @@ document.addEventListener("DOMContentLoaded", async () => {
           window.history.replaceState(null, "", url);
           loadMetaFromStore(message.summaryId);
         }
+        // Streaming done: flush any remaining unpunctuated text, then enable Listen button.
+        if (ttsSpeakOnStream && tts.supported) {
+          tts.flushRemaining();
+        }
+        if (ttsListenBtn && tts.supported) ttsListenBtn.disabled = false;
         return;
       }
       if (message.type === "error") {
         decodedText = message.message || "Failed to generate summary.";
         renderSummary(decodedText);
+        if (ttsListenBtn && tts.supported) ttsListenBtn.disabled = false;
       }
     });
   }

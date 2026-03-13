@@ -10,6 +10,7 @@ A cross‑browser extension that summarizes web pages using OpenAI, Anthropic, G
 - [Configuration](#configuration)
 - [Privacy](#privacy)
 - [Development](#development)
+- [Known Limitations](#known-limitations)
 
 ## Features
 
@@ -17,6 +18,7 @@ A cross‑browser extension that summarizes web pages using OpenAI, Anthropic, G
 - **Content Extraction**: Automatically extracts text content from web pages
 - **Smart Summarization**: Generates concise, well-structured summaries
 - **Streaming Summaries**: Watch summaries appear in real time for supported providers
+- **Text-to-Speech**: Listen to any summary using the built-in player — play, pause, adjust speed, or have it speak automatically as the summary streams in
 - **Math Rendering**: Renders LaTeX formulas in summaries using KaTeX (supports `$...$`, `$$...$$`, `\(...\)`, `\[...\]`)
 - **History Tracking**: Keeps track of your previous summaries with search, preview, and per-provider deduplication
 - **Caching**: Caches summaries for 30 minutes to reduce API usage
@@ -112,6 +114,15 @@ A cross‑browser extension that summarizes web pages using OpenAI, Anthropic, G
 - **Anthropic**: API key + model name only — no custom endpoint needed
 - **Azure AI Foundry**: Requires Base URL, API Version, and Model name (no deployment name)
 - **Ollama**: Can run entirely locally without an API key
+
+### Text-to-Speech
+The results page includes a built-in TTS player powered by the browser's native Web Speech API — no external libraries or API keys required.
+
+- **Listen button**: A speaker icon in the results header activates the player. It is disabled while a summary is streaming and becomes available as soon as the full summary is ready.
+- **Player controls**: Play/Pause, elapsed time, progress bar, and speed selector (0.75×, 1×, 1.25×, 1.5×, 2×). Close the player with the ✕ button.
+- **Stream-along mode**: Enable *"Start speaking while summary streams in"* in Settings → Text-to-Speech. When on, the player appears automatically and speaks completed sentences as they arrive from the AI, without waiting for the full summary.
+- **Voice**: Uses the system default voice. On macOS and iOS, this is typically a high-quality neural voice. On Windows/Android, quality varies by device.
+- **Availability**: Hidden automatically on browsers that do not support the Web Speech API.
 
 ### History Deduplication
 The extension uses smart deduplication to avoid saving duplicate summaries:
@@ -302,11 +313,61 @@ Those files override `core/` during the build.
 - Try refreshing the page
 - Some pages may not be compatible with content extraction
 
+#### Streaming Not Working on Safari
+- This is expected behaviour. Safari's extension service worker has a confirmed WebKit bug that prevents `ReadableStream` from working correctly in that context.
+- The extension automatically falls back to a non-streaming request on Safari — the full summary will appear at once after a short wait.
+- See [Known Limitations → Safari: Streaming Disabled](#safari-streaming-disabled) for full details and tracking references.
+
 ### Getting Help
 If you encounter issues not covered in this documentation:
 1. Check the browser console for error messages
 2. Verify your API provider settings
 3. Ensure your API key is valid and has sufficient credits
+
+## Known Limitations
+
+### Safari: Streaming Disabled
+
+Real-time streaming is **disabled on Safari** and falls back to a non-streaming request (the full summary appears at once after a short wait). This is not a product decision — it is forced by a confirmed WebKit bug in Safari's extension service worker implementation.
+
+#### Why streaming is broken on Safari
+
+The streaming flow works by calling `response.body.getReader()` inside the extension's **background service worker** to read SSE chunks as they arrive from the AI provider, then forwarding each chunk to the results page via a `runtime.Port`. This pattern works correctly on Chrome and Firefox.
+
+On Safari, the background script runs as a **Manifest V3 service worker** (`safari-web-extension://` origin). WebKit's service worker implementation has several unresolved bugs that break this pattern:
+
+| Bug | Status | Fix |
+|---|---|---|
+| `ReadableStream` cancel never called inside a service worker | Fixed in Safari TP 216 (Apr 2025) | Shipping in **Safari 26** |
+| `ReadableStream` cannot be transferred via `postMessage()` — throws `DataCloneError` | Fixed in Safari TP 238 (Feb 2026) | Not yet in stable |
+| Cross-origin `fetch()` CORS failures from `safari-web-extension://` origin in service workers | Partially addressed | Ongoing |
+| `ReadableStream` as a fetch request body (`duplex: 'half'`) not supported | Not yet implemented | No ETA |
+
+`response.body.getReader()` itself works fine in **regular browser tab contexts** (e.g., an extension HTML page). The failures are specific to the service worker scope.
+
+#### Current behaviour
+
+- `platform.isSafari` is detected via User-Agent in [platform.js](core/platform.js)
+- `settings.disableStreamingOnSafari` is set to `true` whenever `platform.isSafari` is true ([settings.js](core/utils/settings.js))
+- [background.js](core/background.js) checks this flag and routes to `summarySession.runNonStreaming()` instead of the streaming path
+
+#### When will it be fixed?
+
+Apple is incrementally fixing these issues. The critical `ReadableStream` cancel fix landed in **Safari 26 beta** (announced at WWDC25, June 2025), and the `postMessage` transfer fix is in **Safari TP 238** (February 2026). Both are expected to ship together in **Safari 26**, targeted for **Fall 2026**.
+
+Once Safari 26 ships, `response.body.getReader()` will be reliable in extension service workers and the `disableStreamingOnSafari` guard can be removed.
+
+#### References
+
+- [WebKit Bug — ReadableStream cancel not called in Service Worker](https://webkit.org/blog/16731/release-notes-for-safari-technology-preview-216/) (fixed in Safari TP 216)
+- [Safari TP 238 — ReadableStream postMessage transfer support](https://webkit.org/blog/17848/release-notes-for-safari-technology-preview-238/)
+- [Safari TP 234 — Readable byte streams, abort/cancel fixes](https://webkit.org/blog/17674/release-notes-for-safari-technology-preview-234/)
+- [News from WWDC25 — WebKit in Safari 26 beta](https://webkit.org/blog/16993/news-from-wwdc25-web-technology-coming-this-fall-in-safari-26-beta/)
+- [MDN browser-compat-data — ReadableStream postMessage transfer](https://github.com/mdn/browser-compat-data/issues/24643) (Safari marked unsupported)
+- [Safari extension service worker cross-origin fetch bug](https://github.com/JamiesWhiteShirt/safari-service-worker-background-bug)
+- [Apple Developer Forums — fetch() in Safari extension](https://developer.apple.com/forums/thread/764279)
+
+---
 
 ## Contributing
 

@@ -14,6 +14,7 @@ const saveButton = document.getElementById('saveBtn');
 const resetButton = document.getElementById('resetBtn');
 const notification = document.getElementById('notification');
 const syncApiKeysCheckbox = document.getElementById('syncApiKeys');
+const ttsSpeakOnStreamCheckbox = document.getElementById('ttsSpeakOnStream');
 const useDefaultBlacklistCheckbox = document.getElementById('useDefaultBlacklist');
 const toggleDefaultBlacklistButton = document.getElementById('toggleDefaultBlacklist');
 const defaultBlacklistTextarea = document.getElementById('defaultBlacklistedUrls');
@@ -243,6 +244,7 @@ function resetForm() {
     toggleDefaultBlacklistButton.disabled = false;
   }
   if (syncApiKeysCheckbox) syncApiKeysCheckbox.checked = false;
+  if (ttsSpeakOnStreamCheckbox) ttsSpeakOnStreamCheckbox.checked = false;
 
   updateProviderFields();
   populateModelPresets("openai");
@@ -255,7 +257,7 @@ function resetForm() {
  * Loads saved settings from chrome.storage.sync and populates the form fields.
  */
 function loadSettings() {
-  const fields = ["provider", "providerSettings", "apiKey", "baseUrl", "apiVersion", "model", "language", "promptProfile", "useExtractionEngine", "blacklistedUrls", "defaultBlacklistedUrls", "syncApiKeys"];
+  const fields = ["provider", "providerSettings", "apiKey", "baseUrl", "apiVersion", "model", "language", "promptProfile", "useExtractionEngine", "blacklistedUrls", "defaultBlacklistedUrls", "syncApiKeys", "ttsSpeakOnStream"];
   Promise.all([
     platform.storage.get('sync', [...fields, 'providerApiKeys']),
     platform.storage.get('local', ['providerApiKeys'])
@@ -295,6 +297,7 @@ function loadSettings() {
       toggleDefaultBlacklistButton.disabled = !useDefaultBlacklistCheckbox?.checked;
     }
     if (syncApiKeysCheckbox) syncApiKeysCheckbox.checked = Boolean(items.syncApiKeys);
+    if (ttsSpeakOnStreamCheckbox) ttsSpeakOnStreamCheckbox.checked = Boolean(items.ttsSpeakOnStream);
 
     updateProviderFields();
     populateModelPresets(providerKey);
@@ -322,7 +325,8 @@ function saveSettings() {
     defaultBlacklistedUrls: useDefaultBlacklistCheckbox?.checked
       ? defaultBlacklistTextarea.value.trim()
       : "",
-    syncApiKeys: Boolean(syncApiKeysCheckbox?.checked)
+    syncApiKeys: Boolean(syncApiKeysCheckbox?.checked),
+    ttsSpeakOnStream: Boolean(ttsSpeakOnStreamCheckbox?.checked)
   };
 
   providerSettingsCache[providerKey] = providerSpecificNoKey;
