@@ -19,6 +19,7 @@ function escapeHtml(value) {
 
 document.addEventListener("DOMContentLoaded", async () => {
   const container = document.getElementById("summary");
+  const closeBtn = document.getElementById("closeBtn");
   const copyBtn = document.getElementById("copyBtn");
   const downloadBtn = document.getElementById("downloadBtn");
   const historyBtn = document.getElementById("historyBtn");
@@ -372,6 +373,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   // History button functionality
   historyBtn?.addEventListener("click", () => {
     platform.tabs.create({ url: platform.runtime.getURL('history.html') });
+  });
+
+  // Close button — go back if navigated from history, otherwise close this tab
+  closeBtn?.addEventListener("click", () => {
+    if (history.length > 1) {
+      window.history.back();
+      return;
+    }
+    // window.close() is blocked for extension tabs not opened via window.open().
+    // Use the extension tabs API to close the current tab instead.
+    const api = platform.api;
+    if (api?.tabs?.getCurrent) {
+      api.tabs.getCurrent((tab) => {
+        if (tab?.id) api.tabs.remove(tab.id);
+      });
+    } else {
+      window.close(); // fallback for environments where tabs API is unavailable
+    }
   });
 
   /**
