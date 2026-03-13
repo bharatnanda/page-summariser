@@ -16,7 +16,7 @@
   /* Text */
   --color-text-primary:    #111827;
   --color-text-secondary:  #6B7280;
-  --color-text-tertiary:   #9CA3AF;
+  --color-text-tertiary:   #6B7280;
   --color-text-inverse:    #FFFFFF;
 
   /* Accent */
@@ -87,7 +87,7 @@
 
     --color-text-primary:    #F1F5F9;
     --color-text-secondary:  #94A3B8;
-    --color-text-tertiary:   #64748B;
+    --color-text-tertiary:   #94A3B8;
     --color-text-inverse:    #0F172A;
 
     --color-accent:          #3B82F6;
@@ -196,7 +196,7 @@ a { color: inherit; }
 }
 
 .btn:disabled {
-  opacity: 0.45;
+  opacity: 0.55;
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -639,6 +639,17 @@ a { color: inherit; }
   gap: var(--space-2);
 }
 
+.popup-domain {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 var(--space-1);
+  margin-top: calc(var(--space-1) * -1);  /* pull closer to the CTA button */
+}
+
 .popup-divider {
   height: 1px;
   background: var(--color-border-subtle);
@@ -865,8 +876,10 @@ a { color: inherit; }
 }
 
 .history-empty-icon {
+  display: flex;
+  justify-content: center;
   color: var(--color-text-tertiary);
-  margin: 0 auto var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .history-empty-title {
@@ -1046,7 +1059,6 @@ a { color: inherit; }
   border-bottom: 1px solid var(--color-border);
   padding: var(--space-3) var(--space-5);
   display: flex;
-  flex-wrap: wrap;    /* allows TTS player row to wrap below the title row */
   align-items: center;
   gap: var(--space-3);
 }
@@ -1079,7 +1091,7 @@ a { color: inherit; }
 }
 
 .article-title {
-  font-size: var(--text-base);
+  font-size: var(--text-lg);
   font-weight: 600;
   color: var(--color-text-primary);
   margin-bottom: var(--space-2);
@@ -1094,7 +1106,10 @@ a { color: inherit; }
   color: var(--color-accent-text);
   text-decoration: none;
   margin-bottom: var(--space-3);
-  word-break: break-all;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .article-source:hover {
@@ -1276,42 +1291,70 @@ a { color: inherit; }
   .results-header { padding: var(--space-3) var(--space-4); }
   .results-header-title { display: none; }
 
-  /* TTS player: tighter gaps on small screens */
-  .tts-player { gap: var(--space-1); padding: var(--space-2) 0; }
-  .tts-speed { padding: var(--space-1) var(--space-1); font-size: 0.7rem; }
+  /* Larger touch targets on mobile (Apple HIG / Material: 44px min) */
+  .btn-icon { width: 44px; height: 44px; }
+
+  /* TTS strip: tighter on small screens */
+  .tts-strip { gap: var(--space-2); padding: var(--space-2) var(--space-3); }
+  .tts-speed { padding: var(--space-1); font-size: 0.7rem; }
 }
 
 /* ============================================================
-   TTS Player Bar
+   TTS Inline Strip
    ============================================================ */
-.tts-player {
+.tts-strip {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  /* Full-width second row inside the sticky header */
-  width: 100%;
-  padding: var(--space-2) 0;
-  border-top: 1px solid var(--color-border);
-}
-
-.tts-control-btn {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: var(--color-surface-raised);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5);
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  color: var(--color-text-primary);
+  border-radius: var(--radius-lg);
 }
 
-.tts-control-btn:hover:not(:disabled) {
+/* Play/Pause + Stop icon buttons inside the strip */
+.tts-strip-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   background: var(--color-accent-subtle);
-  border-color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-full);
   color: var(--color-accent-text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base),
+    color var(--transition-base);
 }
 
-/* Progress track */
+.tts-strip-btn:hover:not(:disabled) {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-text-inverse);
+}
+
+.tts-strip-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Idle label */
+.tts-strip-label {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Progress track — shown when playing/paused */
 .tts-track {
   flex: 1;
   display: flex;
@@ -1353,7 +1396,7 @@ a { color: inherit; }
   font-weight: 500;
   color: var(--color-text-secondary);
   background: var(--color-surface-raised);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-text-tertiary);
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-2);
   cursor: pointer;
@@ -1365,22 +1408,6 @@ a { color: inherit; }
 .tts-speed:hover {
   border-color: var(--color-accent);
   color: var(--color-accent-text);
-}
-
-/* Listen button active state — accent tint when player is open */
-#ttsListenBtn.tts-active {
-  color: var(--color-accent-text);
-  background: var(--color-accent-subtle);
-}
-
-/* Slide-in animation for player bar */
-@keyframes tts-slide-in {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.tts-player:not([hidden]) {
-  animation: tts-slide-in var(--transition-base) ease;
 }
 
 /* ============================================================

@@ -4,6 +4,7 @@ import { platform } from './platform.js';
 document.addEventListener("DOMContentLoaded", async () => {
   const notification = document.getElementById("notification");
   await updateCounterDisplay();
+  await updateDomainDisplay();
 
   document.getElementById("settingsBtn").addEventListener("click", () => {
     platform.runtime.openOptionsPage();
@@ -49,6 +50,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 });
+
+/**
+ * Show the hostname of the current active tab below the CTA button.
+ * Silently skips for new-tab, extension, or non-http pages.
+ * @returns {Promise<void>}
+ */
+async function updateDomainDisplay() {
+  try {
+    const tabs = await platform.tabs.query({ active: true, currentWindow: true });
+    const url = tabs?.[0]?.url;
+    if (!url) return;
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return;
+    const domain = parsed.hostname.replace(/^www\./, "");
+    const el = document.getElementById("currentDomain");
+    if (el) {
+      el.textContent = domain;
+      el.hidden = false;
+    }
+  } catch (_) {
+    // Ignore — non-critical display element.
+  }
+}
 
 /**
  * Refresh the counter display from sync storage.

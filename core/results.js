@@ -29,9 +29,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const articleProviderModel = document.getElementById("articleProviderModel");
   const summaryMetrics = document.getElementById("summaryMetrics");
 
-  // TTS elements
-  const ttsListenBtn = document.getElementById("ttsListenBtn");
-  const ttsPlayer = document.getElementById("ttsPlayer");
+  // TTS elements — inline strip
+  const ttsStrip = document.getElementById("ttsStrip");
+  const ttsStripLabel = document.getElementById("ttsStripLabel");
+  const ttsTrack = document.getElementById("ttsTrack");
   const ttsPlayPause = document.getElementById("ttsPlayPause");
   const ttsPlayIcon = document.getElementById("ttsPlayIcon");
   const ttsPauseIcon = document.getElementById("ttsPauseIcon");
@@ -47,9 +48,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const tts = new TTSPlayer();
 
-  /** Show/hide the player bar and sync play/pause icon. */
-  function showPlayer() {
-    if (ttsPlayer) ttsPlayer.hidden = false;
+  /** Switch strip to active (playing) state: show track, hide idle label, show stop button. */
+  function enterActiveState() {
+    if (ttsStripLabel) ttsStripLabel.hidden = true;
+    if (ttsTrack) ttsTrack.hidden = false;
+    if (ttsClose) ttsClose.hidden = false;
+  }
+
+  /** Switch strip back to idle state: hide track, show idle label, hide stop button. */
+  function enterIdleState() {
+    if (ttsStripLabel) ttsStripLabel.hidden = false;
+    if (ttsTrack) ttsTrack.hidden = true;
+    if (ttsClose) ttsClose.hidden = true;
+    if (ttsProgressFill) ttsProgressFill.style.width = "0%";
+    if (ttsTime) ttsTime.textContent = "0:00";
   }
 
   function syncPlayPauseIcon(state) {
@@ -63,9 +75,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   tts.onStateChange = (state) => {
     syncPlayPauseIcon(state);
-    if (state === "idle") {
-      if (ttsProgressFill) ttsProgressFill.style.width = "100%";
-    }
+    if (state === "playing") enterActiveState();
   };
 
   tts.onTick = (elapsed, fraction) => {
@@ -75,36 +85,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   tts.onEnd = () => {
-    if (ttsTime) ttsTime.textContent = "0:00";
-    if (ttsProgressFill) ttsProgressFill.style.width = "0%";
+    enterIdleState();
     syncPlayPauseIcon("idle");
   };
 
-  if (ttsListenBtn) {
-    // Hide the button entirely if Web Speech API is not available.
+  if (ttsStrip) {
     if (!tts.supported) {
-      ttsListenBtn.hidden = true;
-    } else {
-      ttsListenBtn.addEventListener("click", () => {
-        if (ttsPlayer && !ttsPlayer.hidden) {
-          // Player already visible — just focus it.
-          ttsPlayPause?.focus();
-          return;
-        }
-        showPlayer();
-        tts.speakAll(decodedText);
-      });
+      // Keep strip hidden on browsers without Web Speech API.
+      ttsStrip.hidden = true;
     }
+    // Strip is revealed by JS after summary is ready (see below).
   }
 
   if (ttsPlayPause) {
     ttsPlayPause.addEventListener("click", () => {
       if (tts.state === "playing") {
         tts.pause();
+        syncPlayPauseIcon("paused");
       } else if (tts.state === "paused") {
         tts.resume();
       } else {
-        // Restarted after end
+        // Start or restart
+        enterActiveState();
         tts.speakAll(decodedText);
       }
     });
@@ -119,9 +121,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (ttsClose) {
     ttsClose.addEventListener("click", () => {
       tts.stop();
-      if (ttsPlayer) ttsPlayer.hidden = true;
-      if (ttsProgressFill) ttsProgressFill.style.width = "0%";
-      if (ttsTime) ttsTime.textContent = "0:00";
+      enterIdleState();
+      syncPlayPauseIcon("idle");
     });
   }
 
@@ -282,13 +283,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!streamId) {
     renderSummary(decodedText);
     renderMeta(summaryMeta);
-    // Summary already complete — enable Listen button immediately.
-    if (ttsListenBtn && tts.supported) ttsListenBtn.disabled = false;
+    // Summary already complete — reveal the TTS strip.
+    if (ttsStrip && tts.supported) ttsStrip.hidden = false;
   }
 
   if (streamId) {
-    // In streaming mode: Listen button is disabled until the stream is done
-    // (unless ttsSpeakOnStream is on, in which case TTS auto-starts on first delta).
+    // Show strip immediately in streaming mode with disabled play button and "loading" label.
+    if (ttsStrip && tts.supported) {
+      ttsStrip.hidden = false;
+      if (ttsPlayPause) ttsPlayPause.disabled = true;
+      if (ttsStripLabel) ttsStripLabel.textContent = "Available when ready\u2026";
+    }
+
     const port = platform.runtime.connect({ name: `summaryStream:${streamId}` });
     port.onMessage.addListener((message) => {
       if (!message) return;
@@ -296,8 +302,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         decodedText = `${decodedText}${message.delta}`;
         renderSummary(decodedText);
         if (ttsSpeakOnStream && tts.supported) {
-          // Show player and feed growing text; TTSPlayer queues complete sentences.
-          showPlayer();
+          // Feed growing text; TTSPlayer queues complete sentences.
+          enterActiveState();
           tts.appendText(decodedText);
         }
         return;
@@ -320,17 +326,20 @@ document.addEventListener("DOMContentLoaded", async () => {
           window.history.replaceState(null, "", url);
           loadMetaFromStore(message.summaryId);
         }
-        // Streaming done: flush any remaining unpunctuated text, then enable Listen button.
+        // Streaming done — unlock the strip.
+        if (ttsPlayPause) ttsPlayPause.disabled = false;
+        if (ttsStripLabel) ttsStripLabel.textContent = "Listen to summary";
         if (ttsSpeakOnStream && tts.supported) {
           tts.flushRemaining();
         }
-        if (ttsListenBtn && tts.supported) ttsListenBtn.disabled = false;
         return;
       }
       if (message.type === "error") {
         decodedText = message.message || "Failed to generate summary.";
         renderSummary(decodedText);
-        if (ttsListenBtn && tts.supported) ttsListenBtn.disabled = false;
+        // Unlock strip even on error so user can attempt to listen.
+        if (ttsPlayPause) ttsPlayPause.disabled = false;
+        if (ttsStripLabel) ttsStripLabel.textContent = "Listen to summary";
       }
     });
   }
@@ -383,11 +392,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     if (articleSource) {
       if (meta.sourceUrl) {
-        articleSource.textContent = meta.sourceUrl;
+        let displayUrl = meta.sourceUrl;
+        try { displayUrl = new URL(meta.sourceUrl).hostname.replace(/^www\./, ""); } catch (_) {}
+        articleSource.textContent = displayUrl;
         articleSource.href = meta.sourceUrl;
+        articleSource.title = meta.sourceUrl;
       } else {
         articleSource.textContent = "Unknown source";
         articleSource.removeAttribute("href");
+        articleSource.removeAttribute("title");
       }
     }
     if (articleProviderModel) {
