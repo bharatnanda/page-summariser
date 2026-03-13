@@ -5,10 +5,10 @@ import { storageGetWithFallback, storageSetWithFallback } from './utils/storage.
 import { platform } from './platform.js';
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const historyTableBody = document.getElementById("historyTableBody");
+  const historyList = document.getElementById("historyList");
   const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+  const searchInput = document.getElementById("historySearch");
 
-  // Clear history event
   clearHistoryBtn.addEventListener("click", async () => {
     if (confirm("Are you sure you want to clear all history? This action cannot be undone.")) {
       await clearHistory();
@@ -16,7 +16,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // Load history
+  searchInput?.addEventListener("input", () => {
+    const query = searchInput.value.trim().toLowerCase();
+    document.querySelectorAll('.history-card').forEach(card => {
+      const text = card.dataset.searchText || "";
+      card.style.display = text.includes(query) ? "" : "none";
+    });
+
+    // Show/hide empty search state
+    const visible = [...document.querySelectorAll('.history-card')]
+      .filter(c => c.style.display !== "none");
+    const existing = document.getElementById("historyEmptySearch");
+    if (visible.length === 0 && query) {
+      if (!existing) {
+        historyList.appendChild(buildEmptyState(
+          "No matches",
+          "Try a different search term.",
+          searchIcon()
+        ));
+        historyList.lastElementChild.id = "historyEmptySearch";
+      }
+    } else if (existing) {
+      existing.remove();
+    }
+  });
+
   await loadHistory();
 });
 
@@ -29,157 +53,249 @@ function storageSet(value) {
 }
 
 /**
- * Load summary history and render the table.
- * @returns {Promise<void>}
+ * Load summary history and render cards.
  */
 async function loadHistory() {
-  const historyTableBody = document.getElementById("historyTableBody");
-  
+  const historyList = document.getElementById("historyList");
+
   try {
     const result = await storageGet(['summaryHistory']);
     const history = result.summaryHistory || [];
 
-    historyTableBody.textContent = "";
+    historyList.textContent = "";
 
     if (history.length === 0) {
-      const row = document.createElement("tr");
-      const cell = document.createElement("td");
-      cell.colSpan = 5;
-      cell.style.textAlign = "center";
-      cell.style.padding = "40px";
-
-      const empty = document.createElement("div");
-      empty.className = "empty-state";
-      empty.style.padding = "20px";
-      empty.style.margin = "0";
-
-      const title = document.createElement("h2");
-      title.textContent = "No Summary History Yet";
-      const message = document.createElement("p");
-      message.textContent = "Summarize some pages using the extension to see them appear here. Your summaries will be saved automatically.";
-
-      empty.appendChild(title);
-      empty.appendChild(message);
-      cell.appendChild(empty);
-      row.appendChild(cell);
-      historyTableBody.appendChild(row);
+      historyList.appendChild(buildEmptyState(
+        "No summaries yet",
+        "Summarize some pages using the extension to see them appear here.",
+        clockIcon()
+      ));
       return;
     }
 
     const fragment = document.createDocumentFragment();
     history.forEach((item, index) => {
-      const sourceUrl = item.sourceUrl || item.url || extractSource(item.summary);
-      const title = item.title || "";
-      const provider = item.provider || "";
-      const model = item.model || "";
-      const preview = item.contentPreview || createContentPreview(item.summary);
-      const formattedDate = formatDate(item.timestamp);
-      const formattedTime = formatTime(item.timestamp);
-
-      const displaySource = sourceUrl || 'Unknown Source';
-      const displayTitle = title || 'Untitled';
-
-      const row = document.createElement("tr");
-      row.className = "history-row";
-      row.dataset.index = String(index);
-
-      const urlCell = document.createElement("td");
-      urlCell.className = "url-cell";
-
-      const titleDiv = document.createElement("div");
-      titleDiv.textContent = displayTitle;
-      const sourceDiv = document.createElement("div");
-      sourceDiv.className = "source-url";
-      sourceDiv.textContent = displaySource;
-
-      urlCell.appendChild(titleDiv);
-      urlCell.appendChild(sourceDiv);
-
-      if (provider || model) {
-        const modelDiv = document.createElement("div");
-        modelDiv.className = "provider-model";
-        modelDiv.textContent = [provider, model].filter(Boolean).join(" • ");
-        urlCell.appendChild(modelDiv);
-      }
-
-      const previewCell = document.createElement("td");
-      previewCell.className = "preview-cell";
-      previewCell.textContent = preview;
-
-      const dateCell = document.createElement("td");
-      dateCell.className = "date-cell";
-      dateCell.textContent = `${formattedDate} ${formattedTime}`;
-
-      const deleteCell = document.createElement("td");
-      deleteCell.className = "delete-cell";
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "delete-btn";
-      deleteBtn.dataset.index = String(index);
-      deleteBtn.title = "Delete summary";
-      deleteBtn.textContent = "🗑️";
-      deleteCell.appendChild(deleteBtn);
-
-      row.appendChild(urlCell);
-      row.appendChild(previewCell);
-      row.appendChild(dateCell);
-      row.appendChild(deleteCell);
-
-      fragment.appendChild(row);
+      fragment.appendChild(buildHistoryCard(item, index));
     });
+    historyList.appendChild(fragment);
 
-    historyTableBody.appendChild(fragment);
-    
-    // Add click event to history rows to view full summary
-    document.querySelectorAll('.history-row').forEach(row => {
-      row.addEventListener('click', (e) => {
-        // Don't trigger if clicking on delete button
-        if (e.target.closest && e.target.closest('.delete-btn')) {
-          return;
-        }
-        
-        const index = parseInt(row.getAttribute('data-index'));
-        viewFullSummary(index);
-      });
-    });
-    
-    // Add event listeners to delete buttons
-    document.querySelectorAll('.delete-btn').forEach(button => {
-      button.addEventListener('click', async (e) => {
-        e.stopPropagation(); // Prevent triggering the row click
-        const target = e.currentTarget;
-        const index = parseInt(target.getAttribute('data-index'));
-        await deleteHistoryItem(index);
-        await loadHistory();
-      });
-    });
   } catch (error) {
     console.error("Error loading history:", error);
-    historyTableBody.innerHTML = `
-      <tr>
-        <td colspan="5" style="text-align: center; padding: 40px;">
-          <div class="empty-state" style="padding: 20px; margin: 0;">
-            <h2>Error Loading History</h2>
-            <p>There was a problem loading your summary history. Please try again.</p>
-          </div>
-        </td>
-      </tr>
-    `;
+    historyList.textContent = "";
+    historyList.appendChild(buildEmptyState(
+      "Error loading history",
+      "There was a problem loading your summary history. Please try again.",
+      null
+    ));
   }
 }
 
 /**
+ * Build a single history card element.
+ * @param {object} item
+ * @param {number} index
+ * @returns {HTMLElement}
+ */
+function buildHistoryCard(item, index) {
+  const sourceUrl = item.sourceUrl || item.url || extractSource(item.summary) || "";
+  const title = item.title || "Untitled";
+  const provider = item.provider || "";
+  const model = item.model || "";
+  const preview = item.contentPreview || createContentPreview(item.summary);
+  const domain = extractDomain(sourceUrl);
+  const relativeDate = formatRelativeDate(item.timestamp);
+  const providerModel = [provider, model].filter(Boolean).join(" · ");
+
+  const searchText = [title, domain, preview, providerModel].join(" ").toLowerCase();
+
+  // Card wrapper
+  const card = document.createElement("article");
+  card.className = "history-card";
+  card.dataset.index = String(index);
+  card.dataset.searchText = searchText;
+  card.setAttribute("role", "button");
+  card.setAttribute("tabindex", "0");
+  card.setAttribute("aria-label", `View summary: ${title}`);
+
+  // Card body
+  const body = document.createElement("div");
+  body.className = "history-card-body";
+
+  // Header row: title + date badge
+  const header = document.createElement("div");
+  header.className = "history-card-header";
+
+  const titleEl = document.createElement("span");
+  titleEl.className = "history-card-title";
+  titleEl.textContent = title;
+
+  const dateBadge = document.createElement("span");
+  dateBadge.className = "badge badge-default history-card-date";
+  dateBadge.textContent = relativeDate;
+
+  header.appendChild(titleEl);
+  header.appendChild(dateBadge);
+
+  // Meta row: domain + provider/model badges
+  const meta = document.createElement("div");
+  meta.className = "history-card-meta";
+
+  if (domain) {
+    const domainBadge = document.createElement("span");
+    domainBadge.className = "badge badge-accent";
+    domainBadge.textContent = domain;
+    meta.appendChild(domainBadge);
+  }
+
+  if (providerModel) {
+    const modelBadge = document.createElement("span");
+    modelBadge.className = "badge badge-default";
+    modelBadge.textContent = providerModel;
+    meta.appendChild(modelBadge);
+  }
+
+  // Preview
+  const previewEl = document.createElement("p");
+  previewEl.className = "history-card-preview";
+  previewEl.textContent = preview;
+
+  body.appendChild(header);
+  if (meta.children.length > 0) body.appendChild(meta);
+  body.appendChild(previewEl);
+
+  // Actions: delete button + chevron
+  const actions = document.createElement("div");
+  actions.className = "history-card-actions";
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.className = "btn btn-icon btn-danger";
+  deleteBtn.dataset.index = String(index);
+  deleteBtn.setAttribute("aria-label", "Delete this summary");
+  deleteBtn.innerHTML = trashIcon();
+
+  const chevron = document.createElement("span");
+  chevron.className = "history-card-chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.innerHTML = chevronRightIcon();
+
+  actions.appendChild(deleteBtn);
+  actions.appendChild(chevron);
+
+  // Inline confirm overlay (hidden by default)
+  const confirm = document.createElement("div");
+  confirm.className = "history-card-confirm";
+  confirm.hidden = true;
+  confirm.setAttribute("role", "group");
+  confirm.setAttribute("aria-label", "Confirm delete");
+
+  const confirmText = document.createElement("span");
+  confirmText.className = "history-card-confirm-text";
+  confirmText.textContent = "Delete this summary?";
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn btn-secondary btn-sm";
+  cancelBtn.textContent = "Cancel";
+
+  const confirmDeleteBtn = document.createElement("button");
+  confirmDeleteBtn.className = "btn btn-danger-solid btn-sm";
+  confirmDeleteBtn.textContent = "Delete";
+  confirmDeleteBtn.dataset.index = String(index);
+
+  confirm.appendChild(confirmText);
+  confirm.appendChild(cancelBtn);
+  confirm.appendChild(confirmDeleteBtn);
+
+  card.appendChild(body);
+  card.appendChild(actions);
+  card.appendChild(confirm);
+
+  // --- Event listeners ---
+
+  // Click card body → view summary (not on action buttons)
+  card.addEventListener("click", (e) => {
+    if (e.target.closest(".history-card-actions") || e.target.closest(".history-card-confirm")) {
+      return;
+    }
+    viewFullSummary(index);
+  });
+
+  card.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && !e.target.closest("button")) {
+      e.preventDefault();
+      viewFullSummary(index);
+    }
+  });
+
+  // Delete → show confirm
+  deleteBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    actions.hidden = true;
+    confirm.hidden = false;
+
+    // Auto-dismiss after 5s
+    const timer = setTimeout(() => {
+      confirm.hidden = true;
+      actions.hidden = false;
+    }, 5000);
+
+    cancelBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      clearTimeout(timer);
+      confirm.hidden = true;
+      actions.hidden = false;
+    }, { once: true });
+
+    confirmDeleteBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      clearTimeout(timer);
+      await deleteHistoryItem(index);
+      await loadHistory();
+    }, { once: true });
+  });
+
+  return card;
+}
+
+/**
+ * Build an empty / error state element.
+ */
+function buildEmptyState(title, message, iconHtml) {
+  const el = document.createElement("div");
+  el.className = "history-empty";
+
+  if (iconHtml) {
+    const iconWrap = document.createElement("div");
+    iconWrap.className = "history-empty-icon";
+    iconWrap.setAttribute("aria-hidden", "true");
+    iconWrap.innerHTML = iconHtml;
+    el.appendChild(iconWrap);
+  }
+
+  const h = document.createElement("p");
+  h.className = "history-empty-title";
+  h.textContent = title;
+
+  const p = document.createElement("p");
+  p.className = "history-empty-text";
+  p.textContent = message;
+
+  el.appendChild(h);
+  el.appendChild(p);
+  return el;
+}
+
+/**
  * Clear all saved history.
- * @returns {Promise<void>}
  */
 async function clearHistory() {
   try {
     await storageSet({ summaryHistory: [] });
     await clearCachedSummaries();
     await clearSummaryViewStore();
-    showNotification(document.getElementById("notification"), "History cleared successfully!", "success");
+    showNotification(document.getElementById("notification"), "History cleared.", "success");
   } catch (error) {
     console.error("Error clearing history:", error);
-    showNotification(document.getElementById("notification"), "Failed to clear history", "error");
+    showNotification(document.getElementById("notification"), "Failed to clear history.", "error");
   }
 }
 
@@ -200,7 +316,6 @@ async function clearSummaryViewStore() {
   } catch (error) {
     console.warn("Failed to clear session summary view store:", error);
   }
-
   try {
     await platform.storage.set('local', { summaryView: {} });
   } catch (error) {
@@ -210,28 +325,24 @@ async function clearSummaryViewStore() {
 
 /**
  * Delete a history item by index.
- * @param {number} index
- * @returns {Promise<void>}
  */
 async function deleteHistoryItem(index) {
   try {
     const result = await storageGet(['summaryHistory']);
     const history = result.summaryHistory || [];
-    
     if (index >= 0 && index < history.length) {
       history.splice(index, 1);
       await storageSet({ summaryHistory: history });
-      showNotification(document.getElementById("notification"), "Summary deleted!", "success");
+      showNotification(document.getElementById("notification"), "Summary deleted.", "success");
     }
   } catch (error) {
     console.error("Error deleting history item:", error);
-    showNotification(document.getElementById("notification"), "Failed to delete summary", "error");
+    showNotification(document.getElementById("notification"), "Failed to delete summary.", "error");
   }
 }
 
 /**
  * Open a stored summary in the results view.
- * @param {number} index
  */
 function viewFullSummary(index) {
   storageGet(['summaryHistory']).then((result) => {
@@ -256,46 +367,51 @@ function viewFullSummary(index) {
   });
 }
 
-/**
- * Format a timestamp to a readable date.
- * @param {string} timestamp
- * @returns {string}
- */
-function formatDate(timestamp) {
-  const date = new Date(timestamp);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
+// --- Helpers ---
+
+function formatRelativeDate(timestamp) {
+  if (!timestamp) return "";
+  const now = Date.now();
+  const diff = now - new Date(timestamp).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-/**
- * Format a timestamp to a readable time.
- * @param {string} timestamp
- * @returns {string}
- */
-function formatTime(timestamp) {
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
-
-/**
- * Extract the first URL from a summary as a fallback source.
- * @param {string} summary
- * @returns {string|null}
- */
-function extractSource(summary) {
-
-  // Extract first full URL (http/https) — allow query params and fragments
-  let sourceUrl = null;
-  const urlMatch = summary.match(/https?:\/\/[^\s]+/i);
-  if (urlMatch) {
-    sourceUrl = urlMatch[0];
+function extractDomain(url) {
+  if (!url) return "";
+  try {
+    const { hostname } = new URL(url);
+    return hostname.replace(/^www\./, "");
+  } catch {
+    return "";
   }
+}
 
-  return sourceUrl;
+function extractSource(summary) {
+  if (!summary) return null;
+  const match = summary.match(/https?:\/\/[^\s]+/i);
+  return match ? match[0] : null;
+}
+
+// --- SVG icons ---
+function trashIcon() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+}
+
+function chevronRightIcon() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`;
+}
+
+function clockIcon() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+}
+
+function searchIcon() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
 }

@@ -57,5 +57,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 async function updateCounterDisplay() {
   const result = await platform.storage.get('sync', ['pageCount']);
   const count = result.pageCount || 0;
-  document.getElementById("pagesSummarized").textContent = count;
+  const statsEl = document.getElementById("popupStats");
+  const dividerEl = document.getElementById("popupDivider");
+  if (count > 0) {
+    document.getElementById("pagesSummarized").textContent = count;
+    if (statsEl) statsEl.hidden = false;
+    if (dividerEl) dividerEl.hidden = false;
+  }
 }

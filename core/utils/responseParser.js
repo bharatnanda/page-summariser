@@ -31,5 +31,9 @@ export function extractTextFromResponse(data, provider) {
     return data.message?.content || data.response || null;
   }
 
+  if (provider === "anthropic") {
+    return data.content?.[0]?.text || null;
+  }
+
   return null;
 }

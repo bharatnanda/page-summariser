@@ -1,6 +1,6 @@
 # Page Summarizer Browser Extension
 
-A cross‑browser extension that summarizes web pages using OpenAI, Google Gemini, Azure OpenAI, or Ollama.
+A cross‑browser extension that summarizes web pages using OpenAI, Anthropic, Google Gemini, Azure AI Foundry, or Ollama.
 
 ## Table of Contents
 - [Features](#features)
@@ -13,15 +13,16 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
 
 ## Features
 
-- **Multi-Provider AI Support**: Works with OpenAI, Google Gemini, Azure OpenAI, and Ollama
+- **Multi-Provider AI Support**: Works with OpenAI, Anthropic, Google Gemini, Azure AI Foundry, and Ollama
 - **Content Extraction**: Automatically extracts text content from web pages
 - **Smart Summarization**: Generates concise, well-structured summaries
 - **Streaming Summaries**: Watch summaries appear in real time for supported providers
 - **Math Rendering**: Renders LaTeX formulas in summaries using KaTeX (supports `$...$`, `$$...$$`, `\(...\)`, `\[...\]`)
-- **History Tracking**: Keeps track of your previous summaries
+- **History Tracking**: Keeps track of your previous summaries with search, preview, and per-provider deduplication
 - **Caching**: Caches summaries for 30 minutes to reduce API usage
 - **Domain Blacklisting**: Prevents summarization on restricted domains with a comprehensive default list for security and privacy
 - **Multi-Language Support**: Summarize content in multiple languages
+- **Auto Light/Dark Mode**: Automatically adapts to your system theme
 - **Responsive Design**: Works on all device sizes
 - **Consistent Toasts**: In-page toast messages for success/error feedback across browsers
 
@@ -30,13 +31,13 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
 1. Download or clone this repository
 2. Build the extension for your target browser (see Development → Build)
 3. Load the built extension:
-   - **Chrome/Edge**: open `chrome://extensions` or `edge://extensions`, enable Developer mode, click “Load unpacked”, choose `dist/chrome/`
-   - **Firefox**: open `about:debugging#/runtime/this-firefox`, click “Load Temporary Add‑on…”, choose any file inside `dist/firefox/`
+   - **Chrome/Edge**: open `chrome://extensions` or `edge://extensions`, enable Developer mode, click "Load unpacked", choose `dist/chrome/`
+   - **Firefox**: open `about:debugging#/runtime/this-firefox`, click "Load Temporary Add‑on…", choose any file inside `dist/firefox/`
    - **Safari**: convert `dist/safari/` using `safari-web-extension-converter` and build/run in Xcode (steps below)
-4. Also available of Chrome Web Store and Mozilla Addons Store
+4. Also available on Chrome Web Store and Mozilla Addons Store
    - **Chrome / Edge**: [Chrome Web Store – Page Summarizer](https://chromewebstore.google.com/detail/page-summarizer/ehnjnlmphpcoijjahimaggoccnjdhaml)
    - **Firefox**: [Mozilla Add-ons – Page Summarizer Extension](https://addons.mozilla.org/en-US/firefox/addon/page-summarizer-extension/)
-   
+
 ## Supported AI Providers
 
 ### OpenAI
@@ -44,22 +45,35 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
 - **Default Model**: gpt-4o-mini
 - **Base URL**: https://api.openai.com/v1 (also accepts full endpoint URLs)
 - **API**: Uses the OpenAI Responses API for both streaming and non-streaming requests
+- **Model Presets**: gpt-4o-mini, gpt-4o, gpt-4.1, gpt-4.1-mini, gpt-3.5-turbo, and more
+
+### Anthropic
+- **API Key Required**: Yes
+- **Default Model**: claude-haiku-4-5-20251001
+- **API**: Uses the Anthropic Messages API with streaming support
+- **Model Presets**: claude-haiku-4-5-20251001 (fast), claude-sonnet-4-6 (balanced), claude-opus-4-6 (most capable)
 
 ### Google Gemini
 - **API Key Required**: Yes
 - **Default Model**: gemini-2.5-flash
 - **Base URL**: https://generativelanguage.googleapis.com/v1beta
+- **Model Presets**: gemini-2.5-flash, gemini-2.5-pro, gemini-2.5-flash-lite, and more
 
-### Azure OpenAI
+### Azure AI Foundry
 - **API Key Required**: Yes
-- **Custom Configuration**: Base URL, Deployment Name, and API Version required
-- **Model**: Configurable
+- **Base URL**: Your Azure AI Services endpoint (e.g. `https://your-resource.services.ai.azure.com`)
+- **API Version**: e.g. `2024-05-01-preview`
+- **Model**: Specify by name in the Model field — no deployment name needed
+- **Supported Models**: Any model deployed on Azure AI Foundry, including OpenAI models (GPT-4o, GPT-4.1), Anthropic Claude (claude-sonnet-4-6, claude-haiku-4-5-20251001), Meta Llama, Mistral, and others
+- **API**: Uses the Azure AI Foundry unified inference endpoint (`/models/chat/completions`)
+
+> **Migrating from Azure OpenAI?** If you previously used the Azure OpenAI provider (with a deployment name and `*.openai.azure.com` endpoint), you will see a migration notice in Settings. Update your Base URL to your Azure AI Foundry endpoint and set a Model name instead of a deployment name. The extension will automatically clear the old deployment field.
 
 ### Ollama (Local)
 - **API Key Required**: No
 - **Default Model**: gemma3n
 - **Base URL**: http://localhost:11434
-- **Note**: Requires Ollama to be installed and running locally. If you are calling from a browser extension, set `export OLLAMA_ORIGINS="*"` before starting Ollama.
+- **Note**: Requires Ollama to be installed and running locally. If calling from a browser extension, set `export OLLAMA_ORIGINS="*"` before starting Ollama.
 
 ## Usage
 
@@ -69,12 +83,12 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
 3. Click "Summarize This Page"
 4. View the generated summary in a new tab
 
-
 ### Viewing History
 1. Click the Page Summarizer icon in your browser toolbar
-2. Click "View History" to see your previous summaries
-3. Click any row to view the full summary
-4. Use the delete button to remove individual summaries
+2. Click "History" to see your previous summaries
+3. Use the search bar to filter by title, domain, or content
+4. Click any entry to view the full summary
+5. Use the delete button to remove individual summaries
 
 ### Managing Settings
 1. Click the Page Summarizer icon in your browser toolbar
@@ -84,19 +98,26 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
 ## Configuration
 
 ### Provider Settings
-- **Provider**: Select from OpenAI, Ollama, Gemini, or Azure OpenAI
+- **Provider**: Select from OpenAI, Anthropic, Gemini, Azure AI Foundry, or Ollama
 - **API Key**: Your API key for the selected provider (not required for Ollama)
-- **Base URL**: Custom endpoint URL (primarily for Azure OpenAI and Ollama)
-- **Model Name**: Specify which model to use
-- **Provider-Scoped Storage**: Each provider keeps its own saved credentials and model settings
+- **Base URL**: Custom endpoint URL (required for Azure AI Foundry and Ollama)
+- **Model Name**: Specify which model to use — choose from presets or enter a custom name
+- **Provider-Scoped Storage**: Each provider keeps its own saved credentials and model settings independently
 
 ### API Key Storage
 - API keys are stored locally by default
-- You can opt in to sync keys across devices with the “Sync API keys across devices” toggle
+- You can opt in to sync keys across devices with the "Sync API keys across devices" toggle
 
 ### Provider-Specific Settings
-- **Azure OpenAI**: Requires Deployment Name and API Version
+- **Anthropic**: API key + model name only — no custom endpoint needed
+- **Azure AI Foundry**: Requires Base URL, API Version, and Model name (no deployment name)
 - **Ollama**: Can run entirely locally without an API key
+
+### History Deduplication
+The extension uses smart deduplication to avoid saving duplicate summaries:
+- Same URL + same provider + same model within 10 minutes → blocked as duplicate (prevents accidental double-saves)
+- Same URL but different provider or model → always saved as a new entry (intentional re-summarization)
+- Identical summary content → always blocked regardless of provider
 
 ### Language Settings
 - Choose the language for generated summaries:
@@ -113,13 +134,11 @@ A cross‑browser extension that summarizes web pages using OpenAI, Google Gemin
   - German
   - Swedish
 
-
-
 ### Domain Blacklisting
 - Prevent summarization on specific domains
 - Use semicolon-separated list with wildcards (e.g., `*.mail.google.com;*.accounts.google.com`)
-- Enable “Include recommended defaults” in Settings to use the built-in list
-- Click “Show defaults” to preview the list (read-only)
+- Enable "Include recommended defaults" in Settings to use the built-in list
+- Click "Show defaults" to preview the list (read-only)
 
 ### Default Blacklisted Domains
 The extension comes with a comprehensive list of default blacklisted domains for security and privacy reasons:
@@ -145,13 +164,12 @@ These domains are blacklisted by default to protect sensitive information. Users
 - No data is shared with third parties
 
 ### API Keys
-- API keys are stored securely in Chrome's storage
+- API keys are stored securely in the browser's local storage by default
 - Keys are only used to authenticate with your chosen AI provider
 - We never see or store your API keys on our servers
 
 ### Detailed Privacy Information
 For complete information about how we handle your data, please read our [Privacy Policy](PRIVACY_POLICY.md).
-
 
 ### Data Flow
 
@@ -234,21 +252,21 @@ Those files override `core/` during the build.
 
 ### Adding New Providers
 
-1. Create a new client in `utils/api/` (e.g., `newProviderClient.js`)
-2. Implement the required functions:
-   - `callNewProvider(prompt, settings)`
-3. Update `utils/apiClient.js` to include the new provider
-4. Add provider-specific settings to `options.html` and `options.js`
-5. Update the provider selection in `options.html`
+1. Create a new client in `core/utils/api/` (e.g., `newProviderClient.js`) exporting `callNewProvider(prompt, settings, signal)` and `callNewProviderStream(prompt, settings, onDelta, signal)`
+2. Register both functions in `core/utils/apiClient.js` (add a `case` to both switch statements)
+3. Add response extraction logic to `core/utils/responseParser.js`
+4. Add the provider button to the segment control in `core/options.html` and a matching `<option>` in the hidden `<select>`
+5. Add model presets and a default model to `core/options.js`
+6. Add the provider's API hostname to `host_permissions` in `platforms/chrome/manifest.json`
 
 ### Customization
 
 #### Styling
-- Modify `assets/styles.css` for global styles
+- Modify `core/assets/styles.css` for global styles — uses CSS custom properties for theming with automatic light/dark mode via `prefers-color-scheme`
 - Update individual HTML files for page-specific styles
 
 #### Prompt Engineering
-- Modify `utils/promptBuilder.js` to change summarization behavior
+- Modify `core/utils/promptBuilder.js` to change summarization behavior
 - Adjust rules for content inclusion/exclusion
 
 #### Error Handling
@@ -262,6 +280,14 @@ Those files override `core/` during the build.
 #### "API Key Missing" Error
 - Ensure you've entered your API key in Settings
 - Verify the API key is correct and active
+
+#### "Settings need to be updated" Error (Azure)
+- This appears when your Azure config uses the old Azure OpenAI format (deployment name + `*.openai.azure.com` endpoint)
+- Open Settings, select **Azure AI Foundry**, and update:
+  - **Base URL** → your Azure AI Services endpoint (e.g. `https://your-resource.services.ai.azure.com`)
+  - **Model** → the model name you have deployed (e.g. `gpt-4o-mini` or `claude-sonnet-4-6`)
+  - **API Version** → `2024-05-01-preview`
+  - Remove any value from the Deployment Name field (no longer used)
 
 #### "Unable to Connect to Ollama" Error
 - Ensure Ollama is installed and running

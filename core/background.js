@@ -74,6 +74,12 @@ async function handleSummarizeTab(tab, { incrementCounter }) {
   if (!tab?.id) throw new Error("No active tab found. Please try again.");
 
   const settings = await getSettings();
+
+  // 0. Migration check — surface config issues before touching the network
+  if (settings.migrationWarning) {
+    throw new Error(`Your settings need to be updated: ${settings.migrationWarning} Please open Settings to fix this.`);
+  }
+
   const pageURL = tab.url || '';
 
   // 1. Domain check — no network or script injection needed

@@ -98,6 +98,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // Hide skeleton loader on first render
+  let skeletonHidden = false;
+  function hideSkeleton() {
+    if (!skeletonHidden) {
+      const skeleton = document.getElementById("summarySkeletonLoader");
+      if (skeleton) skeleton.hidden = true;
+      skeletonHidden = true;
+    }
+  }
+
   /**
    * Render markdown or plain text summary.
    * @param {string} text
@@ -133,14 +143,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         throwOnError: false
       });
     }
+    hideSkeleton();
     updateWordCount(text);
   }
 
   try {
     if (streamId) {
-      const indicator = document.createElement("span");
+      hideSkeleton();
+      const indicator = document.createElement("div");
       indicator.className = "streaming-indicator";
-      indicator.textContent = "Streaming summary";
+      const dot = document.createElement("span");
+      dot.className = "streaming-dot";
+      const label = document.createElement("span");
+      label.textContent = "Generating summary\u2026";
+      indicator.appendChild(dot);
+      indicator.appendChild(label);
       container.replaceChildren(indicator);
       decodedText = "";
     } else if (summaryId) {

@@ -35,6 +35,14 @@ export function createHistoryItem(url, summary, title = "", meta = {}) {
 
 /**
  * Check for duplicates within a time window or identical content.
+ *
+ * Rules:
+ * - Same URL + same provider + same model + within 10-min window → duplicate
+ *   (prevents accidental double-saves from double-clicking)
+ * - Same URL but different provider or model → always a new entry
+ *   (user intentionally re-summarized with a different model)
+ * - Identical summary content regardless of provider → duplicate
+ *
  * @param {Array<any>} history
  * @param {any} item
  * @returns {boolean}
@@ -44,15 +52,24 @@ export function isDuplicateHistoryItem(history, item) {
   const itemTime = Date.parse(item.timestamp || '');
   return history.some(existing => {
     if (existing.url !== item.url) return false;
-    const existingTime = Date.parse(existing.timestamp || '');
-    if (!Number.isNaN(existingTime) && !Number.isNaN(itemTime)) {
-      if (Math.abs(existingTime - itemTime) <= DEDUPE_WINDOW_MS) {
+
+    const sameProvider = (existing.provider || '') === (item.provider || '');
+    const sameModel = (existing.model || '') === (item.model || '');
+
+    // Time-window dedup only applies when provider+model are identical
+    if (sameProvider && sameModel) {
+      const existingTime = Date.parse(existing.timestamp || '');
+      if (!Number.isNaN(existingTime) && !Number.isNaN(itemTime)) {
+        if (Math.abs(existingTime - itemTime) <= DEDUPE_WINDOW_MS) {
+          return true;
+        }
+      }
+      if (existing.timestamp && item.timestamp && existing.timestamp === item.timestamp) {
         return true;
       }
     }
-    if (existing.timestamp && item.timestamp && existing.timestamp === item.timestamp) {
-      return true;
-    }
+
+    // Identical summary content is always a duplicate
     return existing.summary === item.summary;
   });
 }
