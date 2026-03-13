@@ -74,12 +74,6 @@ async function handleSummarizeTab(tab, { incrementCounter }) {
   if (!tab?.id) throw new Error("No active tab found. Please try again.");
 
   const settings = await getSettings();
-
-  // 0. Migration check — surface config issues before touching the network
-  if (settings.migrationWarning) {
-    throw new Error(`Your settings need to be updated: ${settings.migrationWarning} Please open Settings to fix this.`);
-  }
-
   const pageURL = tab.url || '';
 
   // 1. Domain check — no network or script injection needed
@@ -124,6 +118,9 @@ async function showInPageToast(message, type = "info") {
   try {
     const [tab] = await platform.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id) return;
+    // Cannot inject scripts into extension pages, browser UI, or non-HTTP URLs
+    const url = tab.url || "";
+    if (!url.startsWith("http://") && !url.startsWith("https://")) return;
     await platform.scripting.executeScript({
       target: { tabId: tab.id },
       func: (msg, variant, cssText) => {

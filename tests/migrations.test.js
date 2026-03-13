@@ -47,6 +47,33 @@ async function run() {
     assertEqual(reasons.length, 2, 'should report both reasons');
   }
 
+  // Legacy API version → auto-fix flagged
+  {
+    const { needed, autoFix, reasons } = detectAzureMigration({ apiVersion: '2024-02-01' });
+    assert(needed, 'legacy API version should trigger migration');
+    assertEqual(autoFix.apiVersion, '2024-05-01-preview', 'should auto-fix API version');
+    assert(reasons.some(r => r.includes('2024-02-01')), 'should mention old version in reason');
+  }
+
+  // Current Foundry API version → no migration
+  {
+    const { needed } = detectAzureMigration({ apiVersion: '2024-05-01-preview' });
+    assert(!needed, 'current API version should not trigger migration');
+  }
+
+  // All three issues together → three reasons, two auto-fixes
+  {
+    const { needed, autoFix, reasons } = detectAzureMigration({
+      deployment: 'dep',
+      baseUrl: 'https://res.openai.azure.com',
+      apiVersion: '2024-02-01'
+    });
+    assert(needed, 'all three issues should trigger migration');
+    assertEqual(reasons.length, 3, 'should report all three reasons');
+    assert(autoFix.deployment === null, 'deployment should be flagged for removal');
+    assertEqual(autoFix.apiVersion, '2024-05-01-preview', 'API version should be auto-fixed');
+  }
+
   // --- runMigrations integration tests ---
   // (store already set up at the top of run())
 
@@ -62,7 +89,7 @@ async function run() {
       deployment: 'my-old-deployment',
       baseUrl: 'https://res.openai.azure.com',
       apiVersion: '2024-02-01',
-      model: ''
+      model: 'gpt-4o-mini'
     }
   };
 
@@ -73,11 +100,13 @@ async function run() {
     assert(azureMigrationWarning.includes('Deployment'), 'warning should mention deployment');
   }
 
-  // deployment should have been stripped from storage; baseUrl preserved for manual fix
+  // deployment should be stripped, apiVersion rewritten, baseUrl preserved for manual fix
   {
     const azureAfter = store.sync.providerSettings?.azure;
     assert(!azureAfter?.deployment, 'deployment should be stripped from storage after migration');
     assert(azureAfter?.baseUrl === 'https://res.openai.azure.com', 'baseUrl should be preserved for manual fix');
+    assertEqual(azureAfter?.apiVersion, '2024-05-01-preview', 'API version should be auto-updated to Foundry version');
+    assertEqual(azureAfter?.model, 'gpt-4o-mini', 'model should be preserved');
   }
 
   // Second run on already-migrated config (only stale baseUrl remains) → still warns about URL

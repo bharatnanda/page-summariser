@@ -28,6 +28,10 @@ const DEFAULT_MODELS = {
   ollama: "gemma3n"
 };
 
+const DEFAULT_API_VERSIONS = {
+  azure: "2024-05-01-preview"
+};
+
 const MODEL_PRESETS = {
   openai: [
     "gpt-3.5-turbo",
@@ -217,7 +221,8 @@ function getProviderSettingsFromForm() {
 function applyProviderSettingsToForm(settings) {
   document.getElementById("apiKey").value = settings.apiKey || "";
   document.getElementById("baseUrl").value = settings.baseUrl || "";
-  document.getElementById("apiVersion").value = settings.apiVersion || "";
+  const provider = providerSelect?.value?.toLowerCase() || "";
+  document.getElementById("apiVersion").value = settings.apiVersion || DEFAULT_API_VERSIONS[provider] || "";
   document.getElementById("model").value = settings.model || "";
 }
 

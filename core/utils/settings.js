@@ -24,7 +24,6 @@ import { runMigrations } from './migrations.js';
  * @property {string} blacklistedUrls
  * @property {string} defaultBlacklistedUrls
  * @property {boolean} disableStreamingOnSafari
- * @property {string|null} migrationWarning  Non-null when provider config needs manual update
  */
 
 /**
@@ -62,8 +61,8 @@ export async function getSettings() {
     model: settings.model || ""
   };
 
-  const { azureMigrationWarning } = await runMigrations();
-  const migrationWarning = (provider === "azure" && azureMigrationWarning) ? azureMigrationWarning : null;
+  // Run migrations on every settings load (idempotent — only writes when needed).
+  runMigrations().catch(() => {});
 
   return {
     provider,
@@ -77,7 +76,6 @@ export async function getSettings() {
     blacklistedUrls: (settings.blacklistedUrls || "").trim(),
     defaultBlacklistedUrls: await resolveDefaultBlacklist(settings),
     disableStreamingOnSafari,
-    migrationWarning,
   };
 }
 
