@@ -101,9 +101,9 @@ export async function runMigrations() {
   // Apply all auto-fixes in a single storage write
   const hasAutoFix = Object.keys(autoFix).length > 0;
   if (hasAutoFix) {
-    const { deployment: _removed, ...azurePatched } = { ...azureSettings };
+    const azurePatched = { ...azureSettings };
+    if ('deployment' in autoFix) delete azurePatched.deployment;
     if (autoFix.apiVersion) azurePatched.apiVersion = autoFix.apiVersion;
-    // deployment is removed by destructuring above when autoFix.deployment === null
 
     try {
       await platform.storage.set('sync', {

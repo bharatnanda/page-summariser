@@ -11,7 +11,7 @@ export function buildToastStyle(type = "info") {
     info: '#1f2937'
   };
   return [
-    'position:fixed', 'top:20px', 'right:20px', 'z-index:9999',
+    'position:fixed', 'top:20px', 'right:20px', 'z-index:2147483647',
     'max-width:320px', 'color:#fff', 'padding:12px 16px',
     'border-radius:10px', 'font-size:14px', 'font-weight:500',
     'box-shadow:0 10px 15px -3px rgba(0,0,0,0.15)',

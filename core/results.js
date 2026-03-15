@@ -2,6 +2,7 @@ import { loadSummaryForView } from './utils/summaryStore.js';
 import { showNotification } from './utils/notification.js';
 import { platform } from './platform.js';
 import { TTSPlayer, formatTime } from './utils/tts.js';
+import { storageGetWithFallback } from './utils/storage.js';
 
 /**
  * Escape HTML to prevent rendering raw markup in the summary view.
@@ -43,8 +44,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const ttsSpeed = document.getElementById("ttsSpeed");
   const ttsClose = document.getElementById("ttsClose");
 
-  // Read TTS setting directly from storage (avoids pulling in full settings/migrations machinery).
-  const ttsStorageResult = await platform.storage.get('sync', ['ttsSpeakOnStream']);
+  // Read TTS setting via fallback-aware helper so it works even if sync storage is unavailable.
+  const ttsStorageResult = await storageGetWithFallback(['ttsSpeakOnStream'], 'sync', 'local').catch(() => ({}));
   const ttsSpeakOnStream = Boolean(ttsStorageResult?.ttsSpeakOnStream);
 
   const tts = new TTSPlayer();

@@ -228,28 +228,30 @@ function buildHistoryCard(item, index) {
     }
   });
 
-  // Delete → show confirm
+  // Delete → show confirm (card-scoped timer prevents accumulation on rapid clicks)
+  let dismissTimer = null;
   deleteBtn.addEventListener("click", (e) => {
     e.stopPropagation();
+    clearTimeout(dismissTimer);
     actions.hidden = true;
     confirm.hidden = false;
 
     // Auto-dismiss after 5s
-    const timer = setTimeout(() => {
+    dismissTimer = setTimeout(() => {
       confirm.hidden = true;
       actions.hidden = false;
     }, 5000);
 
     cancelBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      clearTimeout(timer);
+      clearTimeout(dismissTimer);
       confirm.hidden = true;
       actions.hidden = false;
     }, { once: true });
 
     confirmDeleteBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
-      clearTimeout(timer);
+      clearTimeout(dismissTimer);
       await deleteHistoryItem(index);
       await loadHistory();
     }, { once: true });

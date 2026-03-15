@@ -70,16 +70,15 @@ function resolveAzureUrl(baseUrl) {
 }
 
 /**
- * Validate required Azure AI Foundry settings.
- * @param {{ apiKey: string, baseUrl: string, apiVersion: string }} settings
+ * Returns true when baseUrl resolves to a multi-model path (/models/chat/completions),
+ * meaning the model name must be supplied in the request body.
+ * Delegates to resolveAzureUrl so endpoint-type logic lives in one place.
+ * @param {string} baseUrl
+ * @returns {boolean}
  */
 function isMultiModelEndpoint(baseUrl) {
   try {
-    const { hostname } = new URL(baseUrl);
-    return (
-      hostname.endsWith(".services.ai.azure.com") ||
-      hostname.endsWith(".cognitiveservices.azure.com")
-    );
+    return resolveAzureUrl(baseUrl).includes("/models/chat/completions");
   } catch (_) {
     return false;
   }

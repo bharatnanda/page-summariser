@@ -83,9 +83,9 @@ export class TTSPlayer {
     this._fullText = "";
     this._queuedUpTo = 0;
 
-    // Progress
-    this._chunksTotal = 0;
-    this._chunksDone = 0;
+    // Progress (character-weighted for linear advance)
+    this._charsTotal = 0;
+    this._charsDone = 0;
 
     /** @type {((state: "idle"|"playing"|"paused") => void) | null} */
     this.onStateChange = null;
@@ -116,8 +116,8 @@ export class TTSPlayer {
     this._fullText = text;
     this._queuedUpTo = text.length;
     this._queue = [...chunks];
-    this._chunksTotal = chunks.length;
-    this._chunksDone = 0;
+    this._charsTotal = chunks.reduce((n, c) => n + c.length, 0);
+    this._charsDone = 0;
     this._playNext();
   }
 
@@ -133,7 +133,7 @@ export class TTSPlayer {
     const { sentences, consumedLength } = extractCompleteSentences(newPart);
     if (sentences.length > 0) {
       this._queue.push(...sentences);
-      this._chunksTotal += sentences.length;
+      this._charsTotal += sentences.reduce((n, c) => n + c.length, 0);
       this._queuedUpTo += consumedLength;
       if (this._state === "idle") this._playNext();
     }
@@ -148,7 +148,7 @@ export class TTSPlayer {
     if (remaining) {
       const chunks = chunkText(remaining);
       this._queue.push(...chunks);
-      this._chunksTotal += chunks.length;
+      this._charsTotal += chunks.reduce((n, c) => n + c.length, 0);
       this._queuedUpTo = this._fullText.length;
       if (this._state === "idle") this._playNext();
     }
@@ -178,8 +178,8 @@ export class TTSPlayer {
     this._currentUtterance = null;
     this._fullText = "";
     this._queuedUpTo = 0;
-    this._chunksTotal = 0;
-    this._chunksDone = 0;
+    this._charsTotal = 0;
+    this._charsDone = 0;
     this._startTime = null;
     this._pausedElapsed = 0;
     this._stopTimer();
@@ -194,8 +194,9 @@ export class TTSPlayer {
     this._rate = rate;
     if (this._state === "playing" && this._currentUtterance) {
       // Re-queue the current chunk so it replays at the new rate.
-      const remaining = [this._currentUtterance.text, ...this._queue];
-      this._chunksDone = Math.max(0, this._chunksDone - 1);
+      const requeued = this._currentUtterance.text;
+      const remaining = [requeued, ...this._queue];
+      this._charsDone = Math.max(0, this._charsDone - requeued.length);
       this._queue = remaining;
       window.speechSynthesis.cancel();
       this._currentUtterance = null;
@@ -218,8 +219,8 @@ export class TTSPlayer {
       const elapsed = Math.floor(
         (this._pausedElapsed + (Date.now() - (this._startTime ?? Date.now()))) / 1000
       );
-      const fraction = this._chunksTotal > 0
-        ? Math.min(1, this._chunksDone / this._chunksTotal)
+      const fraction = this._charsTotal > 0
+        ? Math.min(1, this._charsDone / this._charsTotal)
         : 0;
       this.onTick?.(elapsed, fraction);
     }, 500);
@@ -252,7 +253,7 @@ export class TTSPlayer {
     this._currentUtterance = utterance;
 
     utterance.onend = () => {
-      this._chunksDone += 1;
+      this._charsDone += text.length;
       this._currentUtterance = null;
       this._playNext();
     };

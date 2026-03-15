@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Page Summarizer",
-  "version": "1.1.1",
-  "description": "Summarize the current page using OpenAI, Anthropic, Gemini, Azure OpenAI, or Ollama.",
+  "version": "1.2.0",
+  "description": "Summarize the current page using OpenAI, Anthropic, Gemini, Azure AI Foundry, or Ollama.",
   "permissions": [
     "contextMenus",
     "scripting",
