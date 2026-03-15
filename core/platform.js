@@ -57,7 +57,7 @@ const tabs = {
   }
 };
 
-/** @type {{ getURL: (path: string) => string, connect: (connectInfo?: any) => any, sendMessage: (message: any) => Promise<any>, openOptionsPage: () => Promise<void>, onMessage: any, onConnect: any, onInstalled: any, lastError: () => any }} */
+/** @type {{ getURL: (path: string) => string, connect: (connectInfo?: any) => any, sendMessage: (message: any) => Promise<any>, openOptionsPage: () => Promise<void>, onMessage: any, onConnect: any, onInstalled: any, onStartup: any, lastError: () => any }} */
 const runtime = {
   getURL: (path) => api.runtime?.getURL ? api.runtime.getURL(path) : path,
   connect: (connectInfo) => api.runtime?.connect ? api.runtime.connect(connectInfo) : null,
@@ -74,6 +74,7 @@ const runtime = {
   onMessage: api.runtime?.onMessage || { addListener: () => {} },
   onConnect: api.runtime?.onConnect || { addListener: () => {} },
   onInstalled: api.runtime?.onInstalled || { addListener: () => {} },
+  onStartup: api.runtime?.onStartup || { addListener: () => {} },
   lastError: () => api.runtime?.lastError
 };
 
