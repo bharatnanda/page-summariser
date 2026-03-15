@@ -104,27 +104,30 @@ export function extractPageData(useExtractionEngine = true) {
         clone.querySelectorAll?.(JUNK_SEL)?.forEach((n) => n.remove());
 
         // Replace MathJax/KaTeX rendered elements with their original LaTeX source.
-        // Both store the source in <annotation encoding="application/x-tex">.
-        const getLatex = (el) =>
-          el.querySelector?.('annotation[encoding="application/x-tex"]')?.textContent?.trim() || '';
-        // MathJax v3 (<mjx-container>)
-        clone.querySelectorAll?.('mjx-container').forEach((el) => {
-          const latex = getLatex(el);
-          const display = el.getAttribute('display') === 'true';
-          el.replaceWith(latex ? (display ? `$$${latex}$$` : `$${latex}$`) : '');
-        });
-        // KaTeX (<span class="katex">)
-        clone.querySelectorAll?.('.katex').forEach((el) => {
-          const latex = getLatex(el);
-          el.replaceWith(latex ? `$${latex}$` : '');
-        });
-        // MathJax v2 (<script type="math/tex">)
-        clone.querySelectorAll?.('script[type="math/tex"]').forEach((el) => {
-          el.replaceWith(`$${el.textContent.trim()}$`);
-        });
-        clone.querySelectorAll?.('script[type="math/tex; mode=display"]').forEach((el) => {
-          el.replaceWith(`$$${el.textContent.trim()}$$`);
-        });
+        // Guard with a cheap querySelector first — 4 querySelectorAll scans are skipped on
+        // the ~95% of pages that have no math elements.
+        if (clone.querySelector?.('mjx-container, .katex, script[type="math/tex"]')) {
+          const getLatex = (el) =>
+            el.querySelector?.('annotation[encoding="application/x-tex"]')?.textContent?.trim() || '';
+          // MathJax v3 (<mjx-container>)
+          clone.querySelectorAll?.('mjx-container').forEach((el) => {
+            const latex = getLatex(el);
+            const display = el.getAttribute('display') === 'true';
+            el.replaceWith(latex ? (display ? `$$${latex}$$` : `$${latex}$`) : '');
+          });
+          // KaTeX (<span class="katex">)
+          clone.querySelectorAll?.('.katex').forEach((el) => {
+            const latex = getLatex(el);
+            el.replaceWith(latex ? `$${latex}$` : '');
+          });
+          // MathJax v2 (<script type="math/tex">)
+          clone.querySelectorAll?.('script[type="math/tex"]').forEach((el) => {
+            el.replaceWith(`$${el.textContent.trim()}$`);
+          });
+          clone.querySelectorAll?.('script[type="math/tex; mode=display"]').forEach((el) => {
+            el.replaceWith(`$$${el.textContent.trim()}$$`);
+          });
+        }
 
         workRoot = clone;
       }
@@ -152,7 +155,9 @@ export function extractPageData(useExtractionEngine = true) {
       }
       let out = blocks.join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
       if (out.length < 200 && root instanceof Element) {
-        const t = norm(root.innerText);
+        // Use the junk-stripped clone (workRoot) with textContent instead of root.innerText
+        // to avoid a layout reflow on the live DOM element.
+        const t = norm(workRoot.textContent || "");
         if (!looksJunkText(t)) out = t;
       }
       return out;
@@ -190,7 +195,8 @@ export function extractPageData(useExtractionEngine = true) {
       const linkPenalty = Math.min(linkDensity, 0.9) * 3200 + Math.min(aCount, 350) * 4;
       const uiPenalty = Math.min(formCount, 100) * 160;
       const multiArticlePenalty = Math.max(0, articleCount - 1) * 2000;
-      const tagBoost = (el.tagName || "").toLowerCase() === "article" ? 1200 : 0;
+      const elTag = (el.tagName || "").toLowerCase();
+      const tagBoost = elTag === "article" ? 1200 : (elTag === "main" || el.getAttribute?.("role") === "main") ? 900 : 0;
       return (textLen + structureReward + centerBoost + topBoost + widthBoost + tagBoost) - (linkPenalty + uiPenalty + multiArticlePenalty);
     };
     const pickFirstArticle = () => {
@@ -211,21 +217,19 @@ export function extractPageData(useExtractionEngine = true) {
     const pickBestDomRoot = () => {
       const firstArticle = pickFirstArticle();
       if (firstArticle) return firstArticle;
-      const preferred = [...document.querySelectorAll("article, main, [role='main'], section")];
+      // Single-pass scoring. querySelectorAll deduplicates elements that match multiple
+      // selectors, so each element is scored exactly once. Semantic elements (article, main)
+      // rank naturally via tagBoost in scoreElement without needing a separate preferred pass.
       const all = [...document.querySelectorAll("article, main, [role='main'], section, div")];
       let best = null;
       let bestScore = -Infinity;
-      const consider = (arr) => {
-        for (const el of arr) {
-          const s = scoreElement(el);
-          if (s > bestScore) {
-            bestScore = s;
-            best = el;
-          }
+      for (const el of all) {
+        const s = scoreElement(el);
+        if (s > bestScore) {
+          bestScore = s;
+          best = el;
         }
-      };
-      consider(preferred);
-      consider(all);
+      }
       return best;
     };
     const extractBestShadowContent = () => {

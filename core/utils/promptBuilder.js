@@ -90,7 +90,7 @@ Output only the summary.
 
 ---
 
-**Page Content:**
+**Page Content** (formatted as TITLE: … then CONTENT: …):
 ${content}
 `;
 }
@@ -107,7 +107,7 @@ Rules:
 - Focus on the core facts, intent, and any critical numbers or dates.
 - If the page contains math, **always convert** all formulas and Unicode math symbols to LaTeX: $...$ for inline, $$...$$ for block. Use **only $ and $$** as delimiters — never ( ), \( \), [ ], or plain text.
 
-Page Content:
+Page Content (formatted as TITLE: … then CONTENT: …):
 ${content}
 `;
 }

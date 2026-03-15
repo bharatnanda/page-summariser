@@ -12,7 +12,8 @@ function run() {
   const prompt = buildSummarizationPrompt('hello', 'english');
   assert(prompt.includes('under **250 words**'), 'Prompt should include 250 word cap');
   assert(prompt.includes('Length Target'), 'Prompt should include adaptive length section');
-  assert(prompt.includes('Page Content:'), 'Prompt should include content section');
+  assert(prompt.includes('Page Content'), 'Prompt should include content section');
+  assert(prompt.includes('TITLE:'), 'Prompt should describe TITLE:/CONTENT: format');
 
   console.log('promptBuilder tests passed');
 }
