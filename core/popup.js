@@ -14,8 +14,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     platform.tabs.create({ url: platform.runtime.getURL('history.html') });
   });
 
-  document.getElementById("summarizeBtn").addEventListener("click", async () => {
-    const summarizeBtn = document.getElementById("summarizeBtn");
+  const summarizeBtn = document.getElementById("summarizeBtn");
+  summarizeBtn.addEventListener("click", async () => {
     const labelNode = summarizeBtn.querySelector("span");
     const originalBtnText = labelNode?.textContent || summarizeBtn.textContent;
     

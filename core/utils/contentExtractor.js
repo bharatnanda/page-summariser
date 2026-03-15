@@ -179,10 +179,10 @@ export function extractPageData(useExtractionEngine = true) {
       const li = el.querySelectorAll("li").length;
       const dataIdLike = el.querySelectorAll("[data-id],[data-pos],[data-now-id]").length;
       const timeLike = el.querySelectorAll("time,[class*='timestamp' i],[class*='author' i]").length;
-      const aCount = el.querySelectorAll("a").length;
-      const linkTextLen = [...el.querySelectorAll("a")]
-        .map((a) => norm(a.textContent).length)
-        .reduce((x, y) => x + y, 0);
+      const anchors = el.querySelectorAll("a");
+      const aCount = anchors.length;
+      let linkTextLen = 0;
+      for (const a of anchors) linkTextLen += norm(a.textContent).length;
       const linkDensity = textLen ? linkTextLen / textLen : 1;
       const formCount = el.querySelectorAll("input,button,select,textarea,form").length;
       const articleCount = el.querySelectorAll("article").length;
@@ -230,7 +230,8 @@ export function extractPageData(useExtractionEngine = true) {
     };
     const extractBestShadowContent = () => {
       const els = [...document.querySelectorAll("*")].slice(0, SHADOW_SCAN_CAP);
-      if (!els.some((e) => e.shadowRoot)) return "";
+      const hosts = els.filter((e) => e.shadowRoot);
+      if (hosts.length === 0) return "";
       const scoreShadowRoot = (root) => {
         if (!root || !root.querySelectorAll) return -Infinity;
         const iframeCount = root.querySelectorAll("iframe").length;
@@ -245,7 +246,6 @@ export function extractPageData(useExtractionEngine = true) {
         const adPenalty = /sponsored|advertis|adchoices|promoted|tracking/.test(whole) ? 800 : 0;
         return ps.join(" ").length + ps.length * 300 - adPenalty;
       };
-      const hosts = [...document.querySelectorAll("*")].filter((el) => el.shadowRoot);
       let bestRoot = null;
       let bestScore = -Infinity;
       for (const h of hosts) {

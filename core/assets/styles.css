@@ -20,11 +20,11 @@
   --color-text-inverse:    #FFFFFF;
 
   /* Accent */
-  --color-accent:          #6366F1;
-  --color-accent-hover:    #4F46E5;
-  --color-accent-active:   #4338CA;
-  --color-accent-subtle:   #EEF2FF;
-  --color-accent-text:     #4F46E5;
+  --color-accent:          #3B82F6;
+  --color-accent-hover:    #2563EB;
+  --color-accent-active:   #1D4ED8;
+  --color-accent-subtle:   #EFF6FF;
+  --color-accent-text:     #2563EB;
 
   /* Semantic */
   --color-success:         #059669;
@@ -42,7 +42,7 @@
   --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
 
   /* Focus ring */
-  --focus-ring: 0 0 0 3px rgba(99,102,241,0.30);
+  --focus-ring: 0 0 0 3px rgba(59,130,246,0.30);
 
   /* Spacing */
   --space-1:  4px;
@@ -91,11 +91,11 @@
     --color-text-tertiary:   #94A3B8;
     --color-text-inverse:    #0D1117;
 
-    --color-accent:          #818CF8;
-    --color-accent-hover:    #6366F1;
-    --color-accent-active:   #4F46E5;
-    --color-accent-subtle:   rgba(99,102,241,0.15);
-    --color-accent-text:     #A5B4FC;
+    --color-accent:          #60A5FA;
+    --color-accent-hover:    #3B82F6;
+    --color-accent-active:   #2563EB;
+    --color-accent-subtle:   rgba(59,130,246,0.15);
+    --color-accent-text:     #93C5FD;
 
     --color-success:         #10B981;
     --color-success-subtle:  rgba(16,185,129,0.12);
@@ -110,7 +110,7 @@
     --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.40), 0 2px 4px -2px rgba(0,0,0,0.20);
     --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.50), 0 4px 6px -4px rgba(0,0,0,0.30);
 
-    --focus-ring: 0 0 0 3px rgba(129,140,248,0.40);
+    --focus-ring: 0 0 0 3px rgba(96,165,250,0.40);
   }
 }
 
@@ -204,12 +204,12 @@ a { color: inherit; }
 
 /* Primary */
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-accent) 0%, #8B5CF6 100%);
+  background: linear-gradient(135deg, var(--color-accent) 0%, #06B6D4 100%);
   color: var(--color-text-inverse);
   border-color: transparent;
 }
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--color-accent-hover) 0%, #7C3AED 100%);
+  background: linear-gradient(135deg, var(--color-accent-hover) 0%, #0891B2 100%);
 }
 
 /* Secondary */
@@ -1426,7 +1426,7 @@ a { color: inherit; }
   .results-header,
   .history-header,
   .settings-header {
-    background: #1C2540;
+    background: var(--color-surface-raised);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }

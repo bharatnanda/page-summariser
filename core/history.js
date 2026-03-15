@@ -18,16 +18,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   searchInput?.addEventListener("input", () => {
     const query = searchInput.value.trim().toLowerCase();
-    document.querySelectorAll('.history-card').forEach(card => {
+    const cards = [...document.querySelectorAll('.history-card')];
+    let visibleCount = 0;
+    cards.forEach(card => {
       const text = card.dataset.searchText || "";
-      card.style.display = text.includes(query) ? "" : "none";
+      const show = !query || text.includes(query);
+      card.style.display = show ? "" : "none";
+      if (show) visibleCount++;
     });
 
     // Show/hide empty search state
-    const visible = [...document.querySelectorAll('.history-card')]
-      .filter(c => c.style.display !== "none");
     const existing = document.getElementById("historyEmptySearch");
-    if (visible.length === 0 && query) {
+    if (visibleCount === 0 && query) {
       if (!existing) {
         historyList.appendChild(buildEmptyState(
           "No matches",

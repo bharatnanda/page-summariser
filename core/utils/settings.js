@@ -1,6 +1,5 @@
 import { platform } from '../platform.js';
 import { DEFAULT_BLACKLIST } from './defaultBlacklist.js';
-import { runMigrations } from './migrations.js';
 
 /**
  * @typedef {Object} ProviderSettings
@@ -61,9 +60,6 @@ export async function getSettings() {
     apiVersion: settings.apiVersion || "",
     model: settings.model || ""
   };
-
-  // Run migrations on every settings load (idempotent — only writes when needed).
-  runMigrations().catch(() => {});
 
   return {
     provider,

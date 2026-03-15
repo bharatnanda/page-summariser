@@ -6,6 +6,7 @@ import { summarySession } from './utils/summarySession.js';
 import { DEFAULT_BLACKLIST } from './utils/defaultBlacklist.js';
 import { buildToastStyle } from './utils/notification.js';
 import { combineBlacklists, isDomainBlacklisted } from './utils/domainBlacklist.js';
+import { runMigrations } from './utils/migrations.js';
 
 const activeStreams = new Map();
 
@@ -196,9 +197,14 @@ platform.runtime.onInstalled.addListener(async () => {
   } catch (error) {
     // Ignore storage errors on install.
   }
-  
-  // Clear expired cache on installation
+
   clearExpiredCache();
+  runMigrations().catch(() => {});
+});
+
+// Run migrations on browser startup (handles updates applied while browser was closed).
+platform.runtime.onStartup.addListener(() => {
+  runMigrations().catch(() => {});
 });
 
 // When menu item is clicked, summarize the active tab

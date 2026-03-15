@@ -296,12 +296,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (ttsStripLabel) ttsStripLabel.textContent = "Available when ready\u2026";
     }
 
+    // Batch delta renders to at most one per animation frame so the expensive
+    // markdown re-parse + full DOM replacement doesn't fire on every character.
+    let pendingRenderFrame = null;
+
     const port = platform.runtime.connect({ name: `summaryStream:${streamId}` });
     port.onMessage.addListener((message) => {
       if (!message) return;
       if (message.type === "delta") {
         decodedText = `${decodedText}${message.delta}`;
-        renderSummary(decodedText);
+        if (pendingRenderFrame === null) {
+          pendingRenderFrame = requestAnimationFrame(() => {
+            pendingRenderFrame = null;
+            renderSummary(decodedText);
+          });
+        }
         if (ttsSpeakOnStream && tts.supported) {
           // Feed growing text; TTSPlayer queues complete sentences.
           enterActiveState();
@@ -310,6 +319,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
       if (message.type === "done") {
+        // Cancel any pending batched render and do a final authoritative one.
+        if (pendingRenderFrame !== null) {
+          cancelAnimationFrame(pendingRenderFrame);
+          pendingRenderFrame = null;
+        }
         if (message.summary) {
           decodedText = message.summary;
           renderSummary(decodedText);
@@ -336,6 +350,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
       if (message.type === "error") {
+        if (pendingRenderFrame !== null) {
+          cancelAnimationFrame(pendingRenderFrame);
+          pendingRenderFrame = null;
+        }
         decodedText = message.message || "Failed to generate summary.";
         renderSummary(decodedText);
         // Unlock strip even on error so user can attempt to listen.
