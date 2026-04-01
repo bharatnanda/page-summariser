@@ -173,12 +173,12 @@ function buildHistoryCard(item, index) {
   deleteBtn.className = "btn btn-icon btn-danger";
   deleteBtn.dataset.index = String(index);
   deleteBtn.setAttribute("aria-label", "Delete this summary");
-  deleteBtn.innerHTML = trashIcon();
+  deleteBtn.appendChild(trashIcon());
 
   const chevron = document.createElement("span");
   chevron.className = "history-card-chevron";
   chevron.setAttribute("aria-hidden", "true");
-  chevron.innerHTML = chevronRightIcon();
+  chevron.appendChild(chevronRightIcon());
 
   actions.appendChild(deleteBtn);
   actions.appendChild(chevron);
@@ -271,7 +271,7 @@ function buildEmptyState(title, message, iconHtml) {
     const iconWrap = document.createElement("div");
     iconWrap.className = "history-empty-icon";
     iconWrap.setAttribute("aria-hidden", "true");
-    iconWrap.innerHTML = iconHtml;
+    iconWrap.appendChild(iconHtml);
     el.appendChild(iconWrap);
   }
 
@@ -404,18 +404,22 @@ function extractSource(summary) {
 }
 
 // --- SVG icons ---
+function parseSvg(svgString) {
+  return new DOMParser().parseFromString(svgString, "image/svg+xml").documentElement;
+}
+
 function trashIcon() {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+  return parseSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`);
 }
 
 function chevronRightIcon() {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`;
+  return parseSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`);
 }
 
 function clockIcon() {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+  return parseSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`);
 }
 
 function searchIcon() {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
+  return parseSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`);
 }
