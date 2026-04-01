@@ -4,6 +4,7 @@ import { platform } from './platform.js';
 document.addEventListener("DOMContentLoaded", async () => {
   const notification = document.getElementById("notification");
   await updateCounterDisplay();
+  await updateDomainDisplay();
 
   document.getElementById("settingsBtn").addEventListener("click", () => {
     platform.runtime.openOptionsPage();
@@ -13,8 +14,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     platform.tabs.create({ url: platform.runtime.getURL('history.html') });
   });
 
-  document.getElementById("summarizeBtn").addEventListener("click", async () => {
-    const summarizeBtn = document.getElementById("summarizeBtn");
+  const summarizeBtn = document.getElementById("summarizeBtn");
+  summarizeBtn.addEventListener("click", async () => {
     const labelNode = summarizeBtn.querySelector("span");
     const originalBtnText = labelNode?.textContent || summarizeBtn.textContent;
     
@@ -51,11 +52,40 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 /**
+ * Show the hostname of the current active tab below the CTA button.
+ * Silently skips for new-tab, extension, or non-http pages.
+ * @returns {Promise<void>}
+ */
+async function updateDomainDisplay() {
+  try {
+    const tabs = await platform.tabs.query({ active: true, currentWindow: true });
+    const url = tabs?.[0]?.url;
+    if (!url) return;
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return;
+    const domain = parsed.hostname.replace(/^www\./, "");
+    const el = document.getElementById("currentDomain");
+    if (el) {
+      el.textContent = domain;
+      el.hidden = false;
+    }
+  } catch (_) {
+    // Ignore — non-critical display element.
+  }
+}
+
+/**
  * Refresh the counter display from sync storage.
  * @returns {Promise<void>}
  */
 async function updateCounterDisplay() {
   const result = await platform.storage.get('sync', ['pageCount']);
   const count = result.pageCount || 0;
-  document.getElementById("pagesSummarized").textContent = count;
+  const statsEl = document.getElementById("popupStats");
+  const dividerEl = document.getElementById("popupDivider");
+  if (count > 0) {
+    document.getElementById("pagesSummarized").textContent = count;
+    if (statsEl) statsEl.hidden = false;
+    if (dividerEl) dividerEl.hidden = false;
+  }
 }

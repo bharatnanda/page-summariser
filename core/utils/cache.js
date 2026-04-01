@@ -14,12 +14,10 @@ export async function getCachedSummary(url) {
     
     const cachedItem = cache[url];
     if (!cachedItem) return null;
-    
+
     const now = Date.now();
     if (now - cachedItem.timestamp > CACHE_DURATION) {
-      // Expired, remove from cache
-      delete cache[url];
-      await platform.storage.set('local', { summaryCache: cache });
+      // Expired — skip without writing; clearExpiredCache() handles periodic cleanup.
       return null;
     }
     
@@ -42,28 +40,35 @@ export async function cacheSummary(url, summary, meta = {}) {
     const result = await platform.storage.get('local', ['summaryCache']);
     const cache = result.summaryCache || {};
     
+    const now = Date.now();
     cache[url] = {
       summary,
       title: meta.title || "",
       sourceUrl: meta.sourceUrl || "",
       provider: meta.provider || "",
       model: meta.model || "",
-      timestamp: Date.now()
+      timestamp: now
     };
-    
-    // Keep cache size manageable
-    const urls = Object.keys(cache);
-    if (urls.length > 100) {
-      // Remove oldest entries
-      const sortedUrls = urls.sort((a, b) => cache[b].timestamp - cache[a].timestamp);
-      for (let i = 100; i < sortedUrls.length; i++) {
-        delete cache[sortedUrls[i]];
-      }
+
+    // Evict expired entries first, then trim by count if still over limit.
+    for (const key of Object.keys(cache)) {
+      if (now - cache[key].timestamp > CACHE_DURATION) delete cache[key];
     }
-    
+    const remaining = Object.keys(cache);
+    if (remaining.length > 100) {
+      const sorted = remaining.sort((a, b) => cache[a].timestamp - cache[b].timestamp);
+      for (let i = 0; i < sorted.length - 100; i++) delete cache[sorted[i]];
+    }
+
     await platform.storage.set('local', { summaryCache: cache });
   } catch (error) {
-    console.error("Error caching summary:", error);
+    const msg = String(error?.message || '');
+    if (msg.includes('QUOTA_BYTES') || msg.includes('Quota')) {
+      console.warn('[Page Summarizer] Cache quota exceeded, clearing cache.');
+      try { await platform.storage.set('local', { summaryCache: {} }); } catch (_) {}
+    } else {
+      console.error("Error caching summary:", error);
+    }
   }
 }
 

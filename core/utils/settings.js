@@ -12,10 +12,9 @@ import { DEFAULT_BLACKLIST } from './defaultBlacklist.js';
 
 /**
  * @typedef {Object} Settings
- * @property {"openai"|"azure"|"gemini"|"ollama"} provider
+ * @property {"openai"|"azure"|"gemini"|"ollama"|"anthropic"} provider
  * @property {string} apiKey
  * @property {string} baseUrl
- * @property {string} deployment
  * @property {string} apiVersion
  * @property {string} model
  * @property {string} language
@@ -24,6 +23,7 @@ import { DEFAULT_BLACKLIST } from './defaultBlacklist.js';
  * @property {string} blacklistedUrls
  * @property {string} defaultBlacklistedUrls
  * @property {boolean} disableStreamingOnSafari
+ * @property {boolean} ttsSpeakOnStream - If true, TTS auto-starts as the summary streams in; if false, Listen button activates only after summary is complete.
  */
 
 /**
@@ -32,7 +32,7 @@ import { DEFAULT_BLACKLIST } from './defaultBlacklist.js';
  */
 
 export async function getSettings() {
-  const keys = ["provider", "providerSettings", "providerApiKeys", "apiKey", "baseUrl", "deployment", "apiVersion", "model", "language", "promptProfile", "useExtractionEngine", "blacklistedUrls", "defaultBlacklistedUrls", "defaultBlacklistInitialized", "syncApiKeys"];
+  const keys = ["provider", "providerSettings", "providerApiKeys", "apiKey", "baseUrl", "apiVersion", "model", "language", "promptProfile", "useExtractionEngine", "blacklistedUrls", "defaultBlacklistedUrls", "defaultBlacklistInitialized", "syncApiKeys", "ttsSpeakOnStream"];
   let settings = {};
   let localSettings = {};
   try {
@@ -57,7 +57,6 @@ export async function getSettings() {
   const resolved = providerSettings[provider] || {
     apiKey: settings.apiKey || "",
     baseUrl: settings.baseUrl || "",
-    deployment: settings.deployment || "",
     apiVersion: settings.apiVersion || "",
     model: settings.model || ""
   };
@@ -66,7 +65,6 @@ export async function getSettings() {
     provider,
     apiKey: (providerApiKeysLocal[provider] || (syncApiKeys ? (providerApiKeysSync[provider] || resolved.apiKey || "") : "") || "").trim(),
     baseUrl: (resolved.baseUrl || "").trim(),
-    deployment: (resolved.deployment || "").trim(),
     apiVersion: (resolved.apiVersion || "").trim(),
     model: (resolved.model || "").trim(),
     language: (settings.language || "").trim(),
@@ -75,6 +73,7 @@ export async function getSettings() {
     blacklistedUrls: (settings.blacklistedUrls || "").trim(),
     defaultBlacklistedUrls: await resolveDefaultBlacklist(settings),
     disableStreamingOnSafari,
+    ttsSpeakOnStream: Boolean(settings.ttsSpeakOnStream),
   };
 }
 

@@ -1,303 +1,187 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Page Summarizer Settings</title>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page Summarizer Settings</title>
   <link rel="stylesheet" href="assets/styles.css">
-  <style>
-    body {
-      background: var(--app-bg);
-      margin: 0;
-      padding: 40px;
-      display: flex;
-      justify-content: center;
-    }
-
-    .container {
-      background-color: var(--surface);
-      padding: 30px 25px;
-      width: 460px;
-      max-width: 94vw;
-      border-radius: 10px;
-      box-shadow: var(--card-shadow);
-      border: 1px solid var(--border);
-    }
-
-    h2 {
-      margin-top: 0;
-      margin-bottom: 20px;
-      text-align: center;
-      color: var(--primary);
-    }
-
-    h3 {
-      margin: 24px 0 8px;
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--muted-text);
-    }
-
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: 500;
-      color: var(--dark-text);
-    }
-
-    input, select, textarea {
-      width: 100%;
-      padding: 10px;
-      margin-top: 6px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      box-sizing: border-box;
-      font-size: 14px;
-      transition: border 0.3s, box-shadow 0.3s;
-      font-family: inherit;
-      background: var(--surface);
-      color: var(--dark-text);
-    }
-
-    input:focus, select:focus, textarea:focus {
-      border-color: var(--primary);
-      box-shadow: var(--focus-ring);
-      outline: none;
-    }
-
-    textarea {
-      resize: vertical; /* Allow vertical resizing only */
-      min-height: 120px;
-    }
-
-    button {
-      margin-top: 20px;
-      padding: 10px 16px;
-      width: 100%;
-      background-color: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 15px;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    }
-
-    button:hover {
-      background-color: var(--primary-dark);
-    }
-
-    .ghost-btn {
-      margin-top: 10px;
-      width: auto;
-      background: transparent;
-      color: var(--primary);
-      border: 1px solid var(--border);
-      padding: 8px 12px;
-      font-size: 13px;
-    }
-
-    .ghost-btn:hover {
-      background: rgba(0,0,0,0.03);
-    }
-
-    #status {
-      margin-top: 15px;
-      color: var(--success);
-      text-align: center;
-      font-weight: 500;
-    }
-
-    .provider-specific {
-      display: none;
-    }
-
-    .button-group {
-      display: flex;
-      gap: 10px;
-    }
-
-    .button-group button {
-      flex: 1;
-    }
-
-    details {
-      margin-top: 20px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      background: var(--surface);
-    }
-
-    summary {
-      cursor: pointer;
-      font-weight: 600;
-      color: var(--dark-text);
-      outline: none;
-      list-style: none;
-    }
-    summary::-webkit-details-marker {
-      display: none;
-    }
-    summary::after {
-      content: "▾";
-      float: right;
-      color: var(--muted-text);
-      transition: transform 0.2s ease;
-    }
-    details[open] summary::after {
-      transform: rotate(180deg);
-    }
-
-    .advanced-body {
-      margin-top: 12px;
-    }
-
-    .section-divider {
-      margin: 18px 0 6px;
-      height: 1px;
-      background: var(--border);
-    }
-
-    .help {
-      margin: 6px 0 0;
-      font-size: 12px;
-      color: var(--muted-text);
-    }
-
-    .inline-toggle {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .inline-toggle input {
-      width: auto;
-      margin-top: 0;
-    }
-
-    .preset-hint {
-      font-size: 12px;
-      color: var(--muted-text);
-      margin-top: 4px;
-    }
-  </style>
 </head>
 <body>
-  <div class="container">
-    <h2>⚙ Page Summarizer Settings</h2>
+  <div class="settings-root">
 
-    <h3>Provider</h3>
-    <label>Provider:
-      <select id="provider">
+    <!-- Sticky header -->
+    <header class="settings-header">
+      <span class="settings-header-title">Settings</span>
+    </header>
+
+    <!-- Scrollable content -->
+    <div class="settings-content">
+
+      <!-- Provider section -->
+      <div class="section-label">AI Provider</div>
+
+      <!-- Visual segment control (synced with hidden select by JS) -->
+      <div id="providerSegment" class="segment-group" role="group" aria-label="Select AI provider">
+        <button type="button" class="segment-btn is-active" data-value="gemini">Gemini</button>
+        <button type="button" class="segment-btn" data-value="openai">OpenAI</button>
+        <button type="button" class="segment-btn" data-value="anthropic">Anthropic</button>
+        <button type="button" class="segment-btn" data-value="azure">Azure</button>
+        <button type="button" class="segment-btn" data-value="ollama">Ollama</button>
+      </div>
+
+      <!-- Hidden select (JS reads .value and listens to change events) -->
+      <select id="provider" class="visually-hidden" aria-hidden="true" tabindex="-1">
         <option value="gemini">Gemini</option>
         <option value="openai">OpenAI</option>
+        <option value="anthropic">Anthropic</option>
         <option value="azure">Azure OpenAI</option>
         <option value="ollama">Ollama</option>
       </select>
-    </label>
 
-    <label>API Key:
-      <input type="password" id="apiKey" placeholder="Enter API key" />
-    </label>
-    
-    <h3>Model</h3>
-    <label class="provider-specific" data-show-for="openai gemini">Model Preset:
-      <select id="modelPreset"></select>
-    </label>
-    <p class="help provider-specific" data-show-for="openai gemini">Choose a preset or pick Custom to enter a model.</p>
-
-    <label class="provider-specific" data-show-for="azure">Deployment Preset:
-      <select id="deploymentPreset"></select>
-    </label>
-    <p class="help provider-specific" data-show-for="azure">Optional preset for your Azure deployment name.</p>
-
-    <label class="provider-specific" data-show-for="openai gemini ollama" id="modelInputRow">Model:
-      <input type="text" id="model" placeholder="" />
-      <div class="preset-hint" id="modelPresetHint" hidden>Using preset: <span id="modelPresetValue"></span></div>
-    </label>
-
-    <label class="provider-specific" data-show-for="azure ollama">Base URL:
-      <input type="text" id="baseUrl" placeholder="e.g. https://your-resource.openai.azure.com or http://localhost:11434" />
-    </label>
-
-    <label class="provider-specific" data-show-for="azure" id="deploymentInputRow">Deployment Name:
-      <input type="text" id="deployment" placeholder="e.g. my-deployment" />
-      <div class="preset-hint" id="deploymentPresetHint" hidden>Using preset: <span id="deploymentPresetValue"></span></div>
-    </label>
-    <p class="help provider-specific" data-show-for="azure">Azure uses deployment name instead of model.</p>
-
-    <label class="provider-specific" data-show-for="azure">API Version:
-      <input type="text" id="apiVersion" placeholder="e.g. 2024-02-01" />
-    </label>
-
-    <h3>Summary Output</h3>
-    <label>Summary Language:
-      <select id="language">
-        <option value="english">🇺🇸 English</option>
-        <option value="mandarin">🇨🇳 Mandarin Chinese</option>
-        <option value="hindi">🇮🇳 Hindi</option>
-        <option value="spanish">🇪🇸 Spanish</option>
-        <option value="french">🇫🇷 French</option>
-        <option value="arabic">🇸🇦 Arabic</option>
-        <option value="russian">🇷🇺 Russian</option>
-        <option value="portuguese">🇵🇹 Portuguese</option>
-        <option value="bengali">🇧🇩 Bengali</option>
-        <option value="japanese">🇯🇵 Japanese</option>
-        <option value="german">🇩🇪 German</option>
-        <option value="swedish">🇸🇪 Swedish</option>
-      </select>
-    </label>
-
-    <label>Prompt Style:
-      <select id="promptProfile">
-        <option value="default">Default (Detailed)</option>
-        <option value="compact">Compact (Small Models)</option>
-      </select>
-    </label>
-    <p class="help">Use Compact for smaller or cheaper models that struggle with complex rules.</p>
-    
-    <details id="advancedSettings">
-      <summary>Advanced settings</summary>
-      <div class="advanced-body">
-        <div class="section-divider"></div>
-        <label class="inline-toggle">
-          <input type="checkbox" id="syncApiKeys" />
-          Sync API keys across devices
-        </label>
-        <p class="help">Off by default for security. When enabled, keys are stored in sync storage.</p>
-
-        <h3>Extraction</h3>
-        <label>Extraction Mode:
-          <select id="useExtractionEngine">
-            <option value="true">Smart Extraction (Beta)</option>
-            <option value="false">Basic innerText</option>
-          </select>
-        </label>
-        <p class="help">Smart Extraction is more accurate but may be slower on heavy pages.</p>
-
-        <h3>Content Access</h3>
-        <label>Blocked Sites:
-          <input type="text" id="blacklistedUrls" placeholder="(*.mail.google.com;*.accounts.google.com;*.mail.yahoo.com)" />
-        </label>
-        <label class="inline-toggle">
-          <input type="checkbox" id="useDefaultBlacklist" />
-          Include recommended defaults
-        </label>
-        <button type="button" id="toggleDefaultBlacklist" class="ghost-btn">Show defaults</button>
-        <textarea id="defaultBlacklistedUrls" rows="8" cols="100" hidden readonly></textarea>
+      <!-- API Key -->
+      <div class="form-group" style="margin-top: var(--space-5);">
+        <label class="form-label" for="apiKey">API Key</label>
+        <div class="input-group">
+          <input type="password" id="apiKey" class="form-input"
+                 placeholder="Enter your API key" autocomplete="off">
+        </div>
       </div>
-    </details>
 
-    
-    <div class="button-group">
-      <button id="saveBtn">Save Settings</button>
-      <button id="resetBtn" type="button">Reset</button>
+      <!-- Azure AI Foundry / Ollama Base URL -->
+      <div class="form-group provider-specific" data-show-for="azure ollama">
+        <label class="form-label" for="baseUrl">Base URL</label>
+        <input type="text" id="baseUrl" class="form-input"
+               placeholder="e.g. https://resource.services.ai.azure.com or https://my-model.eastus.models.ai.azure.com">
+      </div>
+
+      <!-- Model section -->
+      <div class="section-label">Model</div>
+
+      <!-- Model preset (OpenAI / Gemini / Anthropic / Azure AI Foundry) -->
+      <div class="form-group provider-specific" data-show-for="openai gemini anthropic azure">
+        <label class="form-label" for="modelPreset">Model Preset</label>
+        <select id="modelPreset" class="form-select"></select>
+        <p class="form-help">Choose a preset or select Custom to enter a model name.</p>
+      </div>
+
+      <!-- Custom model input (OpenAI / Gemini / Anthropic / Azure AI Foundry / Ollama) -->
+      <div class="form-group provider-specific" id="modelInputRow" data-show-for="openai gemini anthropic azure ollama">
+        <label class="form-label" for="model">Model</label>
+        <input type="text" id="model" class="form-input" placeholder="Enter model name">
+        <div class="preset-hint" id="modelPresetHint" hidden>
+          Using preset: <span id="modelPresetValue"></span>
+        </div>
+      </div>
+
+      <!-- Azure API version -->
+      <div class="form-group provider-specific" data-show-for="azure">
+        <label class="form-label" for="apiVersion">API Version</label>
+        <input type="text" id="apiVersion" class="form-input" placeholder="e.g. 2024-05-01-preview">
+      </div>
+
+      <!-- Output section -->
+      <div class="section-label">Output</div>
+
+      <div class="form-group">
+        <label class="form-label" for="language">Summary Language</label>
+        <select id="language" class="form-select">
+          <option value="english">🇺🇸 English</option>
+          <option value="mandarin">🇨🇳 Mandarin Chinese</option>
+          <option value="hindi">🇮🇳 Hindi</option>
+          <option value="spanish">🇪🇸 Spanish</option>
+          <option value="french">🇫🇷 French</option>
+          <option value="arabic">🇸🇦 Arabic</option>
+          <option value="russian">🇷🇺 Russian</option>
+          <option value="portuguese">🇵🇹 Portuguese</option>
+          <option value="bengali">🇧🇩 Bengali</option>
+          <option value="japanese">🇯🇵 Japanese</option>
+          <option value="german">🇩🇪 German</option>
+          <option value="swedish">🇸🇪 Swedish</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="promptProfile">Prompt Style</label>
+        <select id="promptProfile" class="form-select">
+          <option value="default">Default (Detailed)</option>
+          <option value="compact">Compact (Small Models)</option>
+        </select>
+        <p class="form-help">Use Compact for smaller or cheaper models that struggle with complex rules.</p>
+      </div>
+
+      <!-- Text-to-Speech section -->
+      <div class="section-label">Text-to-Speech</div>
+
+      <div class="form-group">
+        <label class="inline-toggle">
+          <input type="checkbox" id="ttsSpeakOnStream">
+          <span class="inline-toggle-label">Start speaking while summary streams in</span>
+        </label>
+        <p class="form-help" style="margin-top: var(--space-1); padding-left: calc(16px + var(--space-3));">
+          When off, use the Listen button on the results page after the summary is ready.
+        </p>
+      </div>
+
+      <!-- Advanced settings (collapsible) -->
+      <details id="advancedSettings" class="settings-details">
+        <summary>Advanced settings</summary>
+        <div class="settings-details-body">
+
+          <div>
+            <label class="inline-toggle">
+              <input type="checkbox" id="syncApiKeys">
+              <span class="inline-toggle-label">Sync API keys across devices</span>
+            </label>
+            <p class="form-help" style="margin-top: var(--space-1); padding-left: calc(16px + var(--space-3));">
+              Off by default for security. When enabled, keys are stored in sync storage.
+            </p>
+          </div>
+
+          <div>
+            <div class="section-label" style="margin-top: 0;">Extraction</div>
+            <label class="form-label" for="useExtractionEngine">Extraction Mode</label>
+            <select id="useExtractionEngine" class="form-select">
+              <option value="true">Smart Extraction (Beta)</option>
+              <option value="false">Basic innerText</option>
+            </select>
+            <p class="form-help">Smart Extraction is more accurate but may be slower on heavy pages.</p>
+          </div>
+
+          <div>
+            <div class="section-label" style="margin-top: 0;">Content Access</div>
+            <label class="form-label" for="blacklistedUrls">Blocked Sites</label>
+            <input type="text" id="blacklistedUrls" class="form-input"
+                   placeholder="e.g. *.mail.google.com;*.accounts.google.com">
+
+            <label class="inline-toggle" style="margin-top: var(--space-3);">
+              <input type="checkbox" id="useDefaultBlacklist">
+              <span class="inline-toggle-label">Include recommended defaults</span>
+            </label>
+
+            <button type="button" id="toggleDefaultBlacklist" class="btn btn-ghost btn-sm"
+                    style="margin-top: var(--space-2);">
+              Show defaults
+            </button>
+
+            <textarea id="defaultBlacklistedUrls" class="form-textarea"
+                      rows="6" hidden readonly
+                      style="margin-top: var(--space-2);"></textarea>
+          </div>
+
+        </div>
+      </details>
+
     </div>
 
-    <div id="notification"></div>
+    <!-- Sticky save footer -->
+    <footer class="settings-footer">
+      <button id="resetBtn" class="reset-link" type="button">Reset to defaults</button>
+      <button id="saveBtn" class="btn btn-primary btn-lg btn-full">Save Settings</button>
+    </footer>
+
   </div>
+
+  <div id="notification" class="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
   <script type="module" src="options.js"></script>
 </body>

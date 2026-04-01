@@ -1,255 +1,57 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Summary History</title>
   <link rel="stylesheet" href="assets/styles.css">
-  <style>
-    body {
-      background: var(--app-bg);
-      padding: 20px;
-      min-height: 100vh;
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    header {
-      background: var(--surface);
-      color: var(--dark-text);
-      padding: 25px 30px;
-      border-radius: 10px;
-      box-shadow: var(--card-shadow);
-      margin-bottom: 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      border: 1px solid var(--border);
-    }
-
-    h1 {
-      font-size: 1.8rem;
-      font-weight: 600;
-      margin: 0;
-      color: var(--primary);
-    }
-
-    .controls {
-      display: flex;
-      gap: 15px;
-      margin-top: 15px;
-      width: 100%;
-    }
-
-    @media (min-width: 768px) {
-      .controls {
-        width: auto;
-        margin-top: 0;
-      }
-    }
-
-    .history-table-container {
-      background: var(--surface);
-      border-radius: 10px;
-      box-shadow: var(--card-shadow);
-      overflow: hidden;
-      border: 1px solid var(--border);
-    }
-
-    .history-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.95rem;
-    }
-
-    .history-table th {
-      background: var(--table-header-bg);
-      padding: 15px 20px;
-      text-align: left;
-      font-weight: 600;
-      color: var(--dark-text);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .history-table td {
-      padding: 15px 20px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .history-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .history-table tr {
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    .history-table tr:hover {
-      background-color: var(--light-bg);
-    }
-
-    .history-table .title-cell {
-      font-weight: 600;
-      color: var(--primary);
-      max-width: 300px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .history-table .url-cell {
-      color: var(--secondary);
-      font-size: 0.9rem;
-      max-width: 200px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .history-table .source-url {
-      color: var(--secondary);
-      font-size: 0.85rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .history-table .provider-model {
-      color: var(--light-text);
-      font-size: 0.8rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .history-table .preview-cell {
-      color: var(--light-text);
-      font-size: 0.9rem;
-      max-width: 300px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .history-table .date-cell {
-      color: var(--secondary);
-      font-size: 0.9rem;
-      white-space: nowrap;
-    }
-
-    .history-table .delete-cell {
-      text-align: center;
-      width: 80px;
-    }
-
-    .delete-btn {
-      background: none;
-      border: none;
-      color: var(--danger);
-      cursor: pointer;
-      font-size: 1.2rem;
-      padding: 5px;
-      border-radius: 4px;
-      transition: background-color 0.2s;
-    }
-
-    .delete-btn:hover {
-      background-color: rgba(244, 67, 54, 0.1);
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      background: var(--surface);
-      border-radius: 10px;
-      box-shadow: var(--card-shadow);
-      border: 1px solid var(--border);
-    }
-
-    .empty-state h2 {
-      color: var(--secondary);
-      margin-bottom: 15px;
-    }
-
-    .empty-state p {
-      color: var(--light-text);
-      max-width: 500px;
-      margin: 0 auto;
-    }
-
-    footer {
-      text-align: center;
-      padding: 30px 0;
-      color: var(--light-text);
-      font-size: 0.9rem;
-      margin-top: 30px;
-    }
-
-    @media (max-width: 767px) {
-      header {
-        padding: 20px;
-      }
-
-      h1 {
-        font-size: 1.5rem;
-      }
-
-      .history-table th,
-      .history-table td {
-        padding: 10px 15px;
-      }
-
-      .history-table .title-cell {
-        max-width: 150px;
-      }
-
-      .history-table .url-cell {
-        max-width: 120px;
-      }
-
-      .history-table .preview-cell {
-        max-width: 150px;
-      }
-    }
-  </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>📜 Summary History</h1>
-      <div class="controls">
-        <button id="clearHistoryBtn" class="btn btn-primary">
-          🗑️ Clear History
-        </button>
-      </div>
+  <div class="history-root">
+
+    <!-- Sticky header -->
+    <header class="history-header">
+      <span class="history-header-title">History</span>
+      <button id="clearHistoryBtn" class="btn btn-danger btn-sm" aria-label="Clear all history">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+        Clear all
+      </button>
     </header>
 
-    <div class="history-table-container">
-      <table class="history-table" id="historyTable">
-        <thead>
-          <tr>
-            <th>URL</th>
-            <th>Preview</th>
-            <th>Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="historyTableBody">
-          <!-- History items will be inserted here -->
-        </tbody>
-      </table>
+    <!-- Search bar -->
+    <div class="history-search-bar">
+      <div class="history-search-wrap">
+        <svg class="history-search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input id="historySearch" type="search" class="history-search-input"
+               placeholder="Search summaries…"
+               aria-label="Search summaries" autocomplete="off">
+      </div>
     </div>
 
-    <footer>
-      <p>Page Summarizer Extension • History is stored locally in your browser</p>
-    </footer>
+    <!-- Card list -->
+    <main>
+      <div id="historyList" class="history-list" role="list" aria-label="Summary history">
+        <!-- Cards rendered by JS -->
+      </div>
+    </main>
+
   </div>
 
-  <div id="notification" class="notification"></div>
+  <div id="notification" class="toast" role="alert" aria-live="assertive" aria-atomic="true"></div>
 
   <script type="module" src="history.js"></script>
 </body>

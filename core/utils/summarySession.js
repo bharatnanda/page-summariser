@@ -109,7 +109,7 @@ async function generateSummary(content, pageURL, options = {}) {
 
   await saveToHistory(pageURL, summary, options.title || "", {
     provider: settings.provider,
-    model: settings.provider === "azure" ? settings.deployment : settings.model
+    model: settings.model
   });
   return { summary, settings };
 }
@@ -172,7 +172,7 @@ export const summarySession = {
         title,
         sourceUrl: pageURL,
         provider: settings.provider,
-        model: settings.provider === "azure" ? settings.deployment : settings.model
+        model: settings.model
       });
     }
 
@@ -184,7 +184,7 @@ export const summarySession = {
       title,
       sourceUrl: pageURL,
       provider: settings.provider,
-      model: settings.provider === "azure" ? settings.deployment : settings.model
+      model: settings.model
     });
     return { summary, summaryId };
   },
@@ -204,7 +204,7 @@ export const summarySession = {
         title,
         sourceUrl: pageURL,
         provider: settings.provider,
-        model: settings.provider === "azure" ? settings.deployment : settings.model
+        model: settings.model
       });
     }
 
@@ -218,7 +218,7 @@ export const summarySession = {
         title,
         sourceUrl: pageURL,
         provider: settings.provider,
-        model: settings.provider === "azure" ? settings.deployment : settings.model
+        model: settings.model
       });
     } catch (error) {
       // Ignore summary store errors.

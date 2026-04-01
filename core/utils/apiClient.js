@@ -2,6 +2,7 @@ import { callOpenAI, callOpenAIStream } from './api/openaiClient.js';
 import { callAzure, callAzureStream } from './api/azureClient.js';
 import { callGemini, callGeminiStream } from './api/geminiClient.js';
 import { callOllama, callOllamaStream } from './api/ollamaClient.js';
+import { callAnthropic, callAnthropicStream } from './api/anthropicClient.js';
 
 function isSafariRuntime() {
   const ua = globalThis?.navigator?.userAgent || "";
@@ -29,6 +30,8 @@ export async function fetchSummary(prompt, settings, signal) {
         return await callGemini(prompt, settings, signal);
       case "ollama":
         return await callOllama(prompt, settings, signal);
+      case "anthropic":
+        return await callAnthropic(prompt, settings, signal);
       default:
         throw new Error(`Unsupported provider: ${settings.provider}. Please select a valid provider in the extension settings.`);
     }
@@ -64,6 +67,8 @@ export async function fetchSummaryStream(prompt, settings, onDelta, signal) {
         return await callGeminiStream(prompt, settings, onDelta, signal);
       case "ollama":
         return await callOllamaStream(prompt, settings, onDelta, signal);
+      case "anthropic":
+        return await callAnthropicStream(prompt, settings, onDelta, signal);
       default: {
         const summary = await fetchSummary(prompt, settings, signal);
         if (onDelta && summary) {
