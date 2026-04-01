@@ -228,7 +228,7 @@ npm run build:safari
 Then convert the WebExtension bundle to a Safari App:
 
 ```
-safari-web-extension-converter dist/safari --project-location safari-app
+xcrun safari-web-extension-converter dist/safari --project-location safari-app --non-interactive
 ```
 
 Open the generated Xcode project in `safari-app/`, enable the extension, and build/run.
